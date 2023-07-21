@@ -20,6 +20,7 @@ from selenium.common.exceptions import (StaleElementReferenceException,
 
 from http.client import RemoteDisconnected
 
+IMG_EXT = 'png'
 FUTURES = []
 IMPL_WAIT_FOR_FULL_LOAD = 18
 RETRY_TIME = 60
@@ -41,6 +42,19 @@ RELEVANT_WORDS = [
     'o-nama',
     'zaposlen', 'nastavnik', 'nastavnici', 'saradnici', 'profesor', 'osoblje'
     'запослен', 'наставник', 'наставници', 'сарадници', 'професор', 'особље']
+
+CHAR_REPLACEMENTS = {
+                    '#': 'ANCHOR',
+                    '?': 'QMARK',
+                    '&': 'AMPERSAND',
+                    ':': 'COLUMN',
+                    ';': 'SEMICOL',
+                    "'": 'APOSTROPHE',
+                    '[': 'SQBRACKET',
+                    ']': 'SQBRACKET',
+                    '/': '__',
+                    'http://': '',
+                    'https://': ''}
 
 
 def setup_web_driver():
@@ -114,7 +128,6 @@ def screenshot_current_webpage(web_driver, err_file, export_path, width=2880, he
     web_driver.set_window_size(width, height)
 
     filename = ''
-    ext = '.png'
     try:
         filename = web_driver.current_url
     except WebDriverException:
@@ -133,16 +146,19 @@ def screenshot_current_webpage(web_driver, err_file, export_path, width=2880, he
     if filename[-1] == '/':
         filename = filename[:-1]
 
-    filename = filename.replace('https://', '').replace('http://', '')
-    filename = filename.replace('/', '__').replace('?', 'QMARK').replace('#', 'ANCHOR').replace('&', 'AMPERSAND')
+    filename = filename.replace(f'__.{IMG_EXT}', f'.{IMG_EXT}')
+
+    for unsafe_part in CHAR_REPLACEMENTS.keys():
+        if unsafe_part in filename:
+            filename = filename.replace(unsafe_part, CHAR_REPLACEMENTS[unsafe_part])
 
     # check if filename exceeds upper limit for number of characters
     FNAME_MAX_LEN = os.pathconf(export_path, 'PC_NAME_MAX')
-    if len(filename) + len(ext) > FNAME_MAX_LEN:
-        filename = filename[:(FNAME_MAX_LEN - len(ext))] + ext
+    if len(filename) + len(IMG_EXT) + 1 > FNAME_MAX_LEN:
+        filename = filename[:(FNAME_MAX_LEN - len(IMG_EXT) - 1)] + '.' + IMG_EXT
         print(f'WARN: Link was too long. The filename of the screenshot has changed to: {filename}', file=err_file)
     else:
-        filename += ext
+        filename += '.' + IMG_EXT
 
     path = os.path.join(export_path, filename)
     if os.path.exists(path):
