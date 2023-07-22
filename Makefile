@@ -1,4 +1,4 @@
-SRC_DIR = profile_crawler/
+SRC_DIR = profilepkit/
 TEST_DIR = tests/
 
 .PHONY: init test
@@ -16,5 +16,5 @@ build:
 	python setup.py
 
 clean:
-	rm -rf profile_crawler/downloads/*
-	rm nohup.out
+	rm -rf profilepkit/downloads/* 2>/dev/null
+	rm nohup.out 2>/dev/null
