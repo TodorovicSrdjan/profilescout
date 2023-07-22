@@ -1,15 +1,17 @@
 import tldextract
 
 from common.constants import ConstantsNamespace
+from link.hop import PageLink
 
 
 constants = ConstantsNamespace
 
 
-def convert_links_to_absolute_path(hops, base_url, current_link):
+def convert_links_to_absolute_path(page_links, base_url, current_link):
     # fix relative links or links that start with '/'
-    hops_fixed = []
-    for (link, depth) in hops:
+    abs_links = []
+    for pl in page_links:
+        link, depth = pl.url, pl.depth
         fixed_link = ''
         if link.startswith('http'):
             fixed_link = link
@@ -27,9 +29,9 @@ def convert_links_to_absolute_path(hops, base_url, current_link):
                 if current_link[-1] != '/':
                     link = '/' + link
                 fixed_link = current_link + link
-        hops_fixed += [(fixed_link, depth)]
+        abs_links += [PageLink(fixed_link, depth)]
 
-    return hops_fixed
+    return abs_links
 
 
 def convert_to_fqdn(url):

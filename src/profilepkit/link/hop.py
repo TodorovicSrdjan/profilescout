@@ -1,5 +1,6 @@
 import re
 import tldextract
+from dataclasses import dataclass
 
 from common.constants import ConstantsNamespace
 
@@ -7,18 +8,26 @@ from common.constants import ConstantsNamespace
 constants = ConstantsNamespace
 
 
-def remove_duplicates(hops):
-    unique_links = hops
+
+@dataclass
+class PageLink:
+    url: str
+    depth: int
+
+
+
+def remove_duplicates(page_links):
+    unique_links = page_links
 
     i = 0
     n = len(unique_links)
     while i < n-1:
         j = i+1
         while j < n:
-            if unique_links[i][0] == unique_links[j][0]:
+            if unique_links[i].url == unique_links[j].url:
                 # update depth if there is better path
-                if unique_links[i][1] > unique_links[j][1]:
-                    unique_links[i][1] = unique_links[j][1]
+                if unique_links[i].depth > unique_links[j].depth:
+                    unique_links[i].depth = unique_links[j].depth
 
                 # delete duplicate
                 del unique_links[j]
@@ -63,44 +72,43 @@ def is_valid_link(url, base_url):
     return True
 
 
-def filter_extracted_links(hops, base_url, visited_links, links_to_visit, err_file):
-    # create filter functions
-    def filter_out_invalid(tuple):
-        return is_valid_link(tuple[0], base_url)
+def filter_extracted_links(page_links, base_url, visited_links, links_to_visit, err_file):
+    def filter_out_invalid(page_link):
+        return is_valid_link(page_link.url, base_url)
 
-    def filter_out_visited(tuple):
-        return tuple[0] not in visited_links
+    def filter_out_visited(page_link):
+        return page_link.url not in visited_links
 
-    def filter_out_present_links(tuple):
-        return tuple[0] not in [to_visit_tuple[0] for to_visit_tuple in links_to_visit]
-
-    valid_hops = filter(filter_out_invalid, hops)
-    valid_not_visited_hops = filter(filter_out_visited, valid_hops)
-    new_links = filter(filter_out_present_links, valid_not_visited_hops)
+    def filter_out_present_links(page_link):
+        return page_link.url not in [to_visit.url for to_visit in links_to_visit]
+    
+    valid = filter(filter_out_invalid, page_links)
+    valid_not_visited = filter(filter_out_visited, valid)
+    new_links = filter(filter_out_present_links, valid_not_visited)
 
     # exclude links that are overly long
     not_too_long = []
-    for link, depth in new_links:
-        if len(link) > 310:
+    for page_link in new_links:
+        if len(page_link.url) > 310:
             print(f'WARN: {link=} is too long and may not be relevant. Ignored', file=err_file)
         else:
-            not_too_long += [(link, depth)]
+            not_too_long.append(page_link)
 
     return remove_duplicates(not_too_long)
 
 
-def prioritize_relevant(hops):
+def prioritize_relevant(page_links):
     '''move relevant word at the beginning of the queue'''
     front = []
     rest = []
-    for link, depth in hops:
+    for page_link in page_links:
         has_relevant = False
         for word in constants.RELEVANT_WORDS:
-            if word in link:
-                front += [(link, depth)]
+            if word in page_link.url:
+                front.append(page_link)
                 has_relevant = True
                 break
         if not has_relevant:
-            rest += [(link, depth)]
+            rest.append(page_link)
 
     return front + rest

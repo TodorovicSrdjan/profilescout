@@ -11,7 +11,7 @@ from selenium.common.exceptions import WebDriverException
 from web.webdriver import setup_web_driver
 from web.webpage import visit_page, extract_links
 from link.utils import convert_links_to_absolute_path
-from link.hop import filter_extracted_links, prioritize_relevant
+from link.hop import PageLink, filter_extracted_links, prioritize_relevant
 from common.exceptions import parse_web_driver_exception
 from common.constants import ConstantsNamespace
 
@@ -72,7 +72,7 @@ def crawl_website(export_path, base_url,
     '''A function to crawl links up to a maximum depth'''
 
     visited_links = set()
-    links_to_visit = [(base_url, 0)]  # add base url as link that needs to be visited
+    links_to_visit = [PageLink(base_url, 0)]  # add base url as link that needs to be visited
     scraped_count = 0
 
     web_driver = None
@@ -109,27 +109,27 @@ def crawl_website(export_path, base_url,
                 break
 
             # take next link from the queue and visit it
-            current_link = links_to_visit.pop(0)
+            curr_page_link = links_to_visit.pop(0)
 
             # visit page
             try:
-                is_text_file = visit_page(web_driver, current_link[0])
+                is_text_file = visit_page(web_driver, curr_page_link.url)
             except WebDriverException as e:
-                err_msg, reason = parse_web_driver_exception(e, current_link[0])
+                err_msg, reason = parse_web_driver_exception(e, curr_page_link.url)
                 print(f'ERROR: {err_msg} (reason: {reason})', file=err_file)
-                print(f'WARN: {reason} {current_link[0]}', file=out_file)
+                print(f'WARN: {reason} {curr_page_link.url}', file=out_file)
 
                 # skip this url
                 continue
 
             # mark link as visited
-            visited_links.add(current_link[0])
+            visited_links.add(curr_page_link.url)
 
             # if content-type is not 'text/*' then ignore it
             if not is_text_file:
                 continue
 
-            print(f'{current_link[1]} {current_link[0]}', file=out_file, flush=True)
+            print(f'{curr_page_link.depth} {curr_page_link.url}', file=out_file, flush=True)
 
             # perform action on visited page
             successful = action(web_driver, err_file, *action_args)
@@ -137,29 +137,29 @@ def crawl_website(export_path, base_url,
             if successful:
                 scraped_count += 1
             else:
-                print(f'ERROR: Failed to perform action {action.__name__!r} for: {current_link[0]}', file=err_file)
+                print(f'ERROR: Failed to perform action {action.__name__!r} for: {curr_page_link.url}', file=err_file)
 
             if max_pages is not None and scraped_count == max_pages:
                 print(f'INFO: Maximum number of pages to scrape ({max_pages}) reached. Stopping the crawling...',
                       file=out_file)
-                print(f'INFO: There were  {len(links_to_visit)} unvisited links in the queue', file=out_file)
-                print(f'INFO: Current depth: {current_link[1]}', file=out_file)
+                print(f'INFO: There were {len(links_to_visit)} unvisited links in the queue', file=out_file)
+                print(f'INFO: Current depth: {curr_page_link.depth}', file=out_file)
 
                 break
 
             # check if the maximum depth (number of hops) has been reached
-            if current_link[1] == max_depth:
+            if curr_page_link.depth == max_depth:
                 # ignore links on the current page and continue with visiting links that left to be visited
                 continue
 
             hops = extract_links(web_driver, base_url,
-                                 url=current_link[0],
-                                 depth=current_link[1],
+                                 url=curr_page_link.url,
+                                 depth=curr_page_link.depth,
                                  err_file=err_file,
                                  include_fragmet=include_fragmet)
 
             # transform extracted URLs, as some of them may be invalid or irrelevant
-            hops_with_abs_path = convert_links_to_absolute_path(hops, base_url, current_link[0])
+            hops_with_abs_path = convert_links_to_absolute_path(hops, base_url, curr_page_link.url)
             hops_to_add = filter_extracted_links(hops_with_abs_path, base_url, visited_links, links_to_visit, err_file)
 
             if bump_relevant:

@@ -7,7 +7,7 @@ from selenium.common.exceptions import (WebDriverException,
                                         UnexpectedAlertPresentException)
 
 from common.constants import ConstantsNamespace
-from link.hop import is_valid_link
+from link.hop import is_valid_link, PageLink
 
 
 constants = ConstantsNamespace
@@ -83,7 +83,7 @@ def screenshot_current_webpage(web_driver, err_file, export_path, width=2880, he
 
 
 def extract_links(web_driver, base_url, url, depth, err_file, include_fragmet=False):
-    hops = []
+    page_links = []
     urls = []
     a_tags = web_driver.find_elements(By.XPATH, '//a[@href]')
     for a_tag in a_tags:
@@ -91,9 +91,9 @@ def extract_links(web_driver, base_url, url, depth, err_file, include_fragmet=Fa
         try:
             href = a_tag.get_attribute('href').strip()
         except StaleElementReferenceException:
-            print(f'ERROR: One of the next hop from "{url}" is skipped (reason: stale element)', file=err_file)
+            print(f'ERROR: One of the links to visit next, "{url}", is skipped (reason: stale element)', file=err_file)
         except WebDriverException as e:
-            print(f'ERROR: One of the next hop from "{url}" is skipped (reason: {str(e)})', file=err_file)
+            print(f'ERROR: One of the links to visit next, "{url}", is skipped (reason: {str(e)})', file=err_file)
         else:
             idx = href.find('?nocache')
             if idx != -1:
@@ -107,6 +107,6 @@ def extract_links(web_driver, base_url, url, depth, err_file, include_fragmet=Fa
                     
             if href not in urls and is_valid_link(href, base_url):
                 urls.append(href)
-                hops += [(href, depth+1)]
+                page_links += [PageLink(href, depth+1)]
 
-    return hops
+    return page_links
