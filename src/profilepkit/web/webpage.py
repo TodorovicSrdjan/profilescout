@@ -84,6 +84,7 @@ def screenshot_current_webpage(web_driver, err_file, export_path, width=2880, he
 
 def extract_links(web_driver, base_url, url, depth, err_file, include_fragmet=False):
     hops = []
+    urls = []
     a_tags = web_driver.find_elements(By.XPATH, '//a[@href]')
     for a_tag in a_tags:
         href = ''
@@ -103,8 +104,9 @@ def extract_links(web_driver, base_url, url, depth, err_file, include_fragmet=Fa
                 frag_idx = href.find('#')
                 if frag_idx != -1:
                     href = href[:frag_idx]
-
-            if href not in hops and is_valid_link(href, base_url):
+                    
+            if href not in urls and is_valid_link(href, base_url):
+                urls.append(href)
                 hops += [(href, depth+1)]
 
     return hops
