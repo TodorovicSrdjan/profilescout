@@ -1,13 +1,56 @@
+import re
+import os
+import sys
 import tldextract
 
+from dataclasses import dataclass
+
 from common.constants import ConstantsNamespace
-from link.hop import PageLink
+from common.exceptions import LongFilenameException
 
 
 constants = ConstantsNamespace
 
 
-def convert_links_to_absolute_path(page_links, base_url, current_link):
+@dataclass
+class PageLink:
+    url: str
+    depth: int
+
+
+def is_valid(url, base_url):
+    if not isinstance(url, str):
+        return False
+
+    if url == '.' or url == '' or url[-1] == '#':
+        return False
+
+    if url.startswith('mailto:') or url.startswith('tel:') or url.startswith('javascript:'):
+        return False
+
+    if '?nocache' in url:
+        return False
+
+    # search for url with filename and extension and check if exntension is invalid
+    matched = re.search(r"^(https?://)?(www\.)?[a-zA-Z0-9_-]+(\.[a-zA-Z]{2,6})+(/\S*)*/\S+\.(\w{1,5})$", url)
+    if matched:
+        ext = matched.groups()[-1]
+        if ext.lower() in constants.INVALID_EXTENSIONS:
+            return False
+
+    base_domain = tldextract.extract(base_url).domain
+    link_domain = tldextract.extract(url).domain
+
+    # TODO rethink; could cause problem with some sites that have profiles
+    # on another url or as PDF/DOCX/...
+    has_protocol = url.startswith('http://') or url.startswith('https://')
+    if has_protocol and base_domain != link_domain:
+        return False
+
+    return True
+
+
+def to_abs_path(page_links, base_url, current_link):
     # fix relative links or links that start with '/'
     abs_links = []
     for pl in page_links:
@@ -34,13 +77,13 @@ def convert_links_to_absolute_path(page_links, base_url, current_link):
     return abs_links
 
 
-def convert_to_fqdn(url):
+def to_fqdn(url):
     return tldextract.extract(url).fqdn
 
 
-def convert_to_base_url(url):
+def to_base_url(url):
     # extract base url from given url
-    base_url = convert_to_fqdn(url)
+    base_url = to_fqdn(url)
 
     if 'https://' in url:
         base_url = 'https://' + base_url
@@ -48,3 +91,98 @@ def convert_to_base_url(url):
         base_url = 'http://' + base_url
 
     return base_url + '/'
+
+
+def remove_duplicates(page_links):
+    unique_links = page_links
+
+    i = 0
+    n = len(unique_links)
+    while i < n-1:
+        j = i+1
+        while j < n:
+            if unique_links[i].url == unique_links[j].url:
+                # update depth if there is better path
+                if unique_links[i].depth > unique_links[j].depth:
+                    unique_links[i].depth = unique_links[j].depth
+
+                # delete duplicate
+                del unique_links[j]
+                j -= 1
+                n -= 1
+            j += 1
+        i += 1
+
+    return unique_links
+
+
+def prioritize_relevant(link_queue):
+    '''move relevant word at the beginning of the queue'''
+    front = []
+    rest = []
+    for page_link in link_queue:
+        has_relevant = False
+        for word in constants.RELEVANT_WORDS:
+            if word in page_link.url:
+                front.append(page_link)
+                has_relevant = True
+                break
+        if not has_relevant:
+            rest.append(page_link)
+
+    return front + rest
+
+
+def filter_out_invalid(page_links, base_url):
+    result = filter(lambda pl: is_valid(pl.url, base_url),
+                    page_links)
+    return list(result)
+
+
+def filter_out_visited(page_links, visited_links):
+    result = filter(lambda pl: pl.url not in visited_links,
+                    page_links)
+    return list(result)
+
+
+def filter_out_present_links(page_links, links_to_visit):
+    result = filter(lambda pl: pl.url not in [to_visit.url for to_visit in links_to_visit],
+                    page_links)
+    return list(result)
+
+
+def filter_out_long(page_links, err_file=sys.stderr):
+    # exclude links that are overly long
+    not_too_long = []
+    for page_link in page_links:
+        if len(page_link.url) > 310:
+            print(f'WARN: url={page_link.url!r} is too long and may not be relevant. Ignored',
+                  file=err_file)
+        else:
+            not_too_long.append(page_link)
+
+    return not_too_long
+
+
+def to_filename(url, export_path):
+    filename = url
+
+    # remove '/' at the end
+    if filename[-1] == '/':
+        filename = filename[:-1]
+
+    filename = filename.replace(f'__.{constants.IMG_EXT}', f'.{constants.IMG_EXT}')
+    filename = filename.replace('http://', '').replace('https://', '')
+
+    for unsafe_part in constants.CHAR_REPLACEMENTS.keys():
+        if unsafe_part in filename:
+            filename = filename.replace(unsafe_part, constants.CHAR_REPLACEMENTS[unsafe_part])
+
+    # check if filename exceeds upper limit for number of characters
+    FNAME_MAX_LEN = os.pathconf(export_path, 'PC_NAME_MAX')
+    if len(filename) + len(constants.IMG_EXT) + 1 > FNAME_MAX_LEN:
+        raise LongFilenameException(filename, FNAME_MAX_LEN)
+    else:
+        filename += '.' + constants.IMG_EXT
+
+    return filename

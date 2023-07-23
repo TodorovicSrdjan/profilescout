@@ -21,3 +21,9 @@ def parse_web_driver_exception(e, url):
         err_msg = f'ERROR: {str(e)}'
 
     return err_msg, reason
+
+
+class LongFilenameException(Exception):
+    def __init__(self, message, limit):
+        super().__init__(message)
+        self.limit = limit

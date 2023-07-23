@@ -1,22 +1,29 @@
-import io
 import os
 import sys
 import time
 import random
 import traceback
 
+from io import StringIO
+from dataclasses import dataclass
 from http.client import RemoteDisconnected
-from selenium.common.exceptions import WebDriverException
 
 from web.webdriver import setup_web_driver
-from web.webpage import visit_page, extract_links
-from link.utils import convert_links_to_absolute_path
-from link.hop import PageLink, filter_extracted_links, prioritize_relevant
-from common.exceptions import parse_web_driver_exception
+from web.manager import CrawlManager
 from common.constants import ConstantsNamespace
 
 
 constants = ConstantsNamespace()
+
+
+@dataclass
+class CrawlOptions:
+    max_depth: int
+    max_pages: int
+    crawl_sleep: int
+    include_fragment: bool
+    bump_relevant: bool
+    use_buffer: bool
 
 
 def close_everything(web_driver, out_file, err_file, export_path, use_buffer):
@@ -65,16 +72,8 @@ def create_out_and_err_files(export_path):
     return out_file, err_file
 
 
-def crawl_website(export_path, base_url,
-                  max_depth, max_pages, crawl_sleep,
-                  include_fragment, bump_relevant, use_buffer,
-                  action, *action_args):
+def crawl_website(export_path, base_url, action, options):
     '''A function to crawl links up to a maximum depth'''
-
-    visited_links = set()
-    links_to_visit = [PageLink(base_url, 0)]  # add base url as link that needs to be visited
-    scraped_count = 0
-
     web_driver = None
     out_file = sys.stdout
     err_file = sys.stderr
@@ -92,85 +91,55 @@ def crawl_website(export_path, base_url,
 
         if export_path_exists:
             # open log files for writing if the directory is created
-            if use_buffer:
-                out_file = io.StringIO()
-                err_file = io.StringIO()
+            if options.use_buffer:
+                out_file = StringIO()
+                err_file = StringIO()
             else:
                 out_file, err_file = create_out_and_err_files(export_path)
 
             print(f'INFO: Logs for {base_url!r} are located at {export_path!r}')
 
+        crawl_manager = CrawlManager(web_driver, base_url, out_file, err_file)
+
+        crawl_manager.max_depth = options.max_depth
+        crawl_manager.max_pages = options.max_pages
+        crawl_manager.bump_relevant = options.bump_relevant
+
         # iterates until there aren't any links to be visited
         # if max depth is reached link extraction is ignored and all links up to that depth are visited and saved
         while True:
-            if len(links_to_visit) == 0:
-                print(f'INFO: All links at a depth of {max_depth} have been visited. Stopping the crawling...',
+            if not crawl_manager.has_next():
+                print(f'INFO: All links at a depth of {options.max_depth} have been visited.',
+                      'Stopping the crawling...',
                       file=out_file)
                 break
 
-            # take next link from the queue and visit it
-            curr_page_link = links_to_visit.pop(0)
-
-            # visit page
-            try:
-                is_text_file = visit_page(web_driver, curr_page_link.url)
-            except WebDriverException as e:
-                err_msg, reason = parse_web_driver_exception(e, curr_page_link.url)
-                print(f'ERROR: {err_msg} (reason: {reason})', file=err_file)
-                print(f'WARN: {reason} {curr_page_link.url}', file=out_file)
-
-                # skip this url
-                continue
-
-            # mark link as visited
-            visited_links.add(curr_page_link.url)
-
-            # if content-type is not 'text/*' then ignore it
-            if not is_text_file:
+            curr_page_link = crawl_manager.visit_next()
+            if curr_page_link is None:
                 continue
 
             print(f'{curr_page_link.depth} {curr_page_link.url}', file=out_file, flush=True)
 
             # perform action on visited page
-            successful = action(web_driver, err_file, *action_args)
+            result = crawl_manager.curr_page.perform_action(action)
 
-            if successful:
-                scraped_count += 1
+            if result.successful:
+                crawl_manager.increase_count()
+                if crawl_manager.is_page_max_reached():
+                    break
+                crawl_manager.queue_sublinks(options.include_fragment)
             else:
-                print(f'ERROR: Failed to perform action {action.__name__!r} for: {curr_page_link.url}', file=err_file)
-
-            if max_pages is not None and scraped_count == max_pages:
-                print(f'INFO: Maximum number of pages to scrape ({max_pages}) reached. Stopping the crawling...',
-                      file=out_file)
-                print(f'INFO: There were {len(links_to_visit)} unvisited links in the queue', file=out_file)
-                print(f'INFO: Current depth: {curr_page_link.depth}', file=out_file)
-
-                break
-
-            # check if the maximum depth (number of hops) has been reached
-            if curr_page_link.depth == max_depth:
-                # ignore links on the current page and continue with visiting links that left to be visited
-                continue
-
-            hops = extract_links(web_driver, base_url,
-                                 url=curr_page_link.url,
-                                 depth=curr_page_link.depth,
-                                 err_file=err_file,
-                                 include_fragmet=include_fragment)
-
-            # transform extracted URLs, as some of them may be invalid or irrelevant
-            hops_with_abs_path = convert_links_to_absolute_path(hops, base_url, curr_page_link.url)
-            hops_to_add = filter_extracted_links(hops_with_abs_path, base_url, visited_links, links_to_visit, err_file)
-
-            if bump_relevant:
-                hops_to_add = prioritize_relevant(hops_to_add)
-
-            links_to_visit.extend(hops_to_add)
+                action_name = None
+                if action.func is None or not hasattr(action.func, "__name__"):
+                    action_name = str(action.action_type).split('.')[1].lower()
+                else:
+                    action_name = action.func.__name__
+                print(f'ERROR: Failed to perform action {action_name!r} for: {curr_page_link.url}', file=err_file)
 
             out_file.flush()
             err_file.flush()
 
-            time.sleep(crawl_sleep)
+            time.sleep(options.crawl_sleep)
     except RemoteDisconnected as rde:
         print(f'INFO: Interrupted. Exiting... ({rde!r})', file=err_file)
     except Exception as e:
@@ -179,4 +148,4 @@ def crawl_website(export_path, base_url,
     else:
         print(f'INFO: Crawling of {base_url!r} is complete')
     finally:
-        close_everything(web_driver, out_file, err_file, export_path, use_buffer)
+        close_everything(web_driver, out_file, err_file, export_path, options.use_buffer)

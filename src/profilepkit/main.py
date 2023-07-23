@@ -5,9 +5,9 @@ import textwrap
 from concurrent.futures import ThreadPoolExecutor, wait
 
 from common.constants import ConstantsNamespace
-from link.utils import convert_to_fqdn, convert_to_base_url
-from web.webpage import screenshot_current_webpage
-from web.crawl import crawl_website
+from link.utils import to_fqdn, to_base_url
+from web.webpage import WebpageActionType, WebpageAction
+from web.crawl import CrawlOptions, crawl_website
 
 
 constants = ConstantsNamespace
@@ -17,7 +17,7 @@ def main(url, urls_file_path, export_path,
          crawl_sleep,
          depth, max_pages, max_threads,
          include_fragment, bump_relevant, peserve_uri, use_buffer,
-         action):
+         action_type):
     user_inputs = []
     crawl_inputs = []
     constants = ConstantsNamespace()
@@ -59,24 +59,25 @@ def main(url, urls_file_path, export_path,
 
     # prepare crawl inputs
     for read_url, read_depth, read_crawl_sleep in user_inputs:
-        output_fname = convert_to_fqdn(read_url)
+        output_fname = to_fqdn(read_url)
         export_path_for_url = os.path.join(export_path, output_fname)
 
         if not peserve_uri:
-            read_url = convert_to_base_url(read_url)
+            read_url = to_base_url(read_url)
 
-        crawl_inputs += [(
-            export_path_for_url,
-            read_url,
+        crawl_options = CrawlOptions(
             read_depth,
             max_pages,
             read_crawl_sleep,
             include_fragment,
             bump_relevant,
-            use_buffer,
-            action,
-            export_path_for_url  # TODO
-            )]
+            use_buffer)
+
+        crawl_inputs += [(
+            export_path_for_url,
+            read_url,
+            WebpageAction(action_type, export_path_for_url),
+            crawl_options)]
 
     print(f'INFO: PID: {os.getpid()!r}')
     print('INFO: Start submitting URls for crawling...')
@@ -135,8 +136,8 @@ if __name__ == "__main__":
         help="Action to perform at a time of visiting the page",
         required=False,
         dest='action',
-        choices=['screenshot'],
-        default='screenshot',
+        choices=['screenshot_and_store'],
+        default='screenshot_and_store',
         type=str)
     parser.add_argument(
         '-b', '--buffer',
@@ -243,10 +244,10 @@ if __name__ == "__main__":
               The current directory has been set as the export directory
               ''')
 
-    # map choice to corresponding function
-    action = lambda x, y, z: print('no action given: ', x, y, z)
-    if args.action == 'screenshot':  # TODO replace with match at some point
-        action = screenshot_current_webpage
+    # map action choice to corresponding function
+    action_type = WebpageActionType.UNKNOWN
+    if args.action == 'screenshot_and_store':
+        action_type = WebpageActionType.SCREENSHOT_AND_STORE
 
     try:
         main(
@@ -261,8 +262,7 @@ if __name__ == "__main__":
             bump_relevant=args.bump_relevant,
             peserve_uri=args.peserve_uri,
             use_buffer=args.use_buffer,
-            action=action
-            )
+            action_type=action_type)
     except KeyboardInterrupt:
         print('\nINFO: Exited')
     else:
