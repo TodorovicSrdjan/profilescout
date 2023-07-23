@@ -82,7 +82,7 @@ def screenshot_current_webpage(web_driver, err_file, export_path, width=2880, he
     return web_driver.save_screenshot(path)
 
 
-def extract_links(web_driver, base_url, url, depth, err_file, include_fragmet=False):
+def extract_links(web_driver, base_url, url, depth, err_file, include_fragment=False):
     page_links = []
     urls = []
     a_tags = web_driver.find_elements(By.XPATH, '//a[@href]')
@@ -99,7 +99,7 @@ def extract_links(web_driver, base_url, url, depth, err_file, include_fragmet=Fa
             if idx != -1:
                 href = href[:idx]
 
-            if not include_fragmet:
+            if not include_fragment:
                 # remove fragmet
                 frag_idx = href.find('#')
                 if frag_idx != -1:

@@ -16,7 +16,7 @@ constants = ConstantsNamespace
 def main(url, urls_file_path, export_path,
          crawl_sleep,
          depth, max_pages, max_threads,
-         include_fragmet, bump_relevant, peserve_uri, use_buffer,
+         include_fragment, bump_relevant, peserve_uri, use_buffer,
          action):
     user_inputs = []
     crawl_inputs = []
@@ -71,7 +71,7 @@ def main(url, urls_file_path, export_path,
             read_depth,
             max_pages,
             read_crawl_sleep,
-            include_fragmet,
+            include_fragment,
             bump_relevant,
             use_buffer,
             action,
@@ -176,9 +176,9 @@ if __name__ == "__main__":
         type=int)
     parser.add_argument(
         '-if', '--include-fragment',
-        help="Consider links with URI Fragmet (e.g. http://example.com/some#fragmet) as seperate page",
+        help="Consider links with URI Fragment (e.g. http://example.com/some#fragment) as seperate page",
         required=False,
-        dest='include_fragmet',
+        dest='include_fragment',
         action='store_const',
         const=True,
         default=False)
@@ -257,7 +257,7 @@ if __name__ == "__main__":
             depth=args.depth,
             max_pages=args.max_pages,
             max_threads=args.max_threads,
-            include_fragmet=args.include_fragmet,
+            include_fragment=args.include_fragment,
             bump_relevant=args.bump_relevant,
             peserve_uri=args.peserve_uri,
             use_buffer=args.use_buffer,

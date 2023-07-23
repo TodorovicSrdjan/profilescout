@@ -67,7 +67,7 @@ def create_out_and_err_files(export_path):
 
 def crawl_website(export_path, base_url,
                   max_depth, max_pages, crawl_sleep,
-                  include_fragmet, bump_relevant, use_buffer,
+                  include_fragment, bump_relevant, use_buffer,
                   action, *action_args):
     '''A function to crawl links up to a maximum depth'''
 
@@ -156,7 +156,7 @@ def crawl_website(export_path, base_url,
                                  url=curr_page_link.url,
                                  depth=curr_page_link.depth,
                                  err_file=err_file,
-                                 include_fragmet=include_fragmet)
+                                 include_fragmet=include_fragment)
 
             # transform extracted URLs, as some of them may be invalid or irrelevant
             hops_with_abs_path = convert_links_to_absolute_path(hops, base_url, curr_page_link.url)
