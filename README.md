@@ -4,9 +4,9 @@
 
 # Requirements
 
-```Bash
-pip3 install tldextract selenium
-```
+Third-Party Python packages
+* `tldextract`
+* `selenium`
 
 ## Docker setup
 
