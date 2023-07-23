@@ -49,9 +49,7 @@ class ConstantsNamespace:
                         "'": 'APOSTROPHE',
                         '[': 'SQBRACKET',
                         ']': 'SQBRACKET',
-                        '/': '__',
-                        'http://': '',
-                        'https://': ''}
+                        '/': '__'}
 
     # Suffix that is added to filename if file with default filename is present
     PRINT_SUFFIX_MIN = 100_000

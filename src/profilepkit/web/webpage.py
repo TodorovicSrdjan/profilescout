@@ -60,7 +60,8 @@ def screenshot_current_webpage(web_driver, err_file, export_path, width=2880, he
         filename = filename[:-1]
 
     filename = filename.replace(f'__.{constants.IMG_EXT}', f'.{constants.IMG_EXT}')
-
+    filename = filename.replace('http://', '').replace('https://', '')
+    
     for unsafe_part in constants.CHAR_REPLACEMENTS.keys():
         if unsafe_part in filename:
             filename = filename.replace(unsafe_part, constants.CHAR_REPLACEMENTS[unsafe_part])
