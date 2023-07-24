@@ -26,7 +26,7 @@ class CrawlOptions:
     use_buffer: bool
 
 
-def close_everything(web_driver, out_file, err_file, export_path, use_buffer):
+def _close_everything(web_driver, out_file, err_file, export_path, use_buffer):
     if web_driver is not None:
         web_driver.quit()
 
@@ -43,7 +43,7 @@ def close_everything(web_driver, out_file, err_file, export_path, use_buffer):
         err_file.close()
 
         # create log files
-        out_file, err_file = create_out_and_err_files(export_path)
+        out_file, err_file = _create_out_and_err_files(export_path)
 
         # write buffered contents to log files
         out_file.write(out_content)
@@ -58,7 +58,7 @@ def close_everything(web_driver, out_file, err_file, export_path, use_buffer):
             err_file.close()
 
 
-def create_out_and_err_files(export_path):
+def _create_out_and_err_files(export_path):
     suffix = ''
     out_log_path = os.path.join(export_path, 'out.log')
     err_log_path = os.path.join(export_path, 'err.log')
@@ -95,7 +95,7 @@ def crawl_website(export_path, base_url, action, options):
                 out_file = StringIO()
                 err_file = StringIO()
             else:
-                out_file, err_file = create_out_and_err_files(export_path)
+                out_file, err_file = _create_out_and_err_files(export_path)
 
             print(f'INFO: Logs for {base_url!r} are located at {export_path!r}')
 
@@ -148,4 +148,4 @@ def crawl_website(export_path, base_url, action, options):
     else:
         print(f'INFO: Crawling of {base_url!r} is complete')
     finally:
-        close_everything(web_driver, out_file, err_file, export_path, options.use_buffer)
+        _close_everything(web_driver, out_file, err_file, export_path, options.use_buffer)
