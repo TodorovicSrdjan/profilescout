@@ -36,7 +36,7 @@ class ConstantsNamespace:
         # rs
         'profil',
         'o-nama',
-        'zaposlen', 'nastavnik', 'nastavnici', 'saradnici', 'profesor', 'osoblje'
+        'zaposlen', 'nastavnik', 'nastavnici', 'saradnici', 'profesor', 'osoblje',
         'запослен', 'наставник', 'наставници', 'сарадници', 'професор', 'особље']
 
     # Mapping for unsafe chars that may appear in the filename
