@@ -123,7 +123,7 @@ def prioritize_relevant(link_queue):
     for page_link in link_queue:
         has_relevant = False
         for word in constants.RELEVANT_WORDS:
-            if word in page_link.url:
+            if word in page_link.url.lower():
                 front.append(page_link)
                 has_relevant = True
                 break
