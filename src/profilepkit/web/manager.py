@@ -90,9 +90,9 @@ class CrawlManager:
         new_links = filter_out_long(new_links, self.err_file)
         new_links = remove_duplicates(new_links)
 
-        if self.bump_relevant:
-            new_links = prioritize_relevant(new_links)
-
         self.__links_to_visit.extend(new_links)
+
+        if self.bump_relevant:
+            self.__links_to_visit = prioritize_relevant(self.__links_to_visit)
 
         return self.__links_to_visit
