@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from http.client import RemoteDisconnected
 
 from web.webdriver import setup_web_driver
-from web.manager import CrawlManager
+from web.manager import CrawlManager, ActionManager, CrawlStatus
 from common.constants import ConstantsNamespace
 
 
@@ -74,6 +74,7 @@ def _create_out_and_err_files(export_path):
 
 def crawl_website(export_path, base_url, action, options):
     '''A function to crawl links up to a maximum depth'''
+    result = None
     web_driver = None
     out_file = sys.stdout
     err_file = sys.stderr
@@ -105,6 +106,8 @@ def crawl_website(export_path, base_url, action, options):
         crawl_manager.max_pages = options.max_pages
         crawl_manager.bump_relevant = options.bump_relevant
 
+        action_manager = ActionManager(web_driver, base_url, out_file, err_file)
+
         # iterates until there aren't any links to be visited
         # if max depth is reached link extraction is ignored and all links up to that depth are visited and saved
         while True:
@@ -121,20 +124,20 @@ def crawl_website(export_path, base_url, action, options):
             print(f'{curr_page_link.depth} {curr_page_link.url}', file=out_file, flush=True)
 
             # perform action on visited page
-            result = crawl_manager.curr_page.perform_action(action)
+            action_result = action_manager.perform_action(crawl_manager.curr_page, action)
 
-            if result.successful:
+            if action_result.crawl_status == CrawlStatus.EXIT:
+                result = action_result.val
+                print(f'INFO: {action_result.msg}', file=out_file)
+                break
+
+            if action_result.successful:
                 crawl_manager.increase_count()
                 if crawl_manager.is_page_max_reached():
                     break
+
+            if action_result.crawl_status != CrawlStatus.SKIP_SUBLINKS:
                 crawl_manager.queue_sublinks(options.include_fragment)
-            else:
-                action_name = None
-                if action.func is None or not hasattr(action.func, "__name__"):
-                    action_name = str(action.action_type).split('.')[1].lower()
-                else:
-                    action_name = action.func.__name__
-                print(f'ERROR: Failed to perform action {action_name!r} for: {curr_page_link.url}', file=err_file)
 
             out_file.flush()
             err_file.flush()
@@ -149,3 +152,5 @@ def crawl_website(export_path, base_url, action, options):
         print(f'INFO: Crawling of {base_url!r} is complete')
     finally:
         _close_everything(web_driver, out_file, err_file, export_path, options.use_buffer)
+
+    return result

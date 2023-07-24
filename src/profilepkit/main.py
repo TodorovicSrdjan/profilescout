@@ -17,7 +17,8 @@ def main(url, urls_file_path, export_path,
          crawl_sleep,
          depth, max_pages, max_threads,
          include_fragment, bump_relevant, peserve_uri, use_buffer,
-         action_type):
+         action_type,
+         image_classifier):
     user_inputs = []
     crawl_inputs = []
     constants = ConstantsNamespace()
@@ -62,6 +63,14 @@ def main(url, urls_file_path, export_path,
         output_fname = to_fqdn(read_url)
         export_path_for_url = os.path.join(export_path, output_fname)
 
+        args = [action_type]
+        if action_type == WebpageActionType.SCREENSHOT_AND_STORE:
+            args.append(export_path_for_url)
+        elif action_type == WebpageActionType.FIND_ORIGIN:
+            args.append(image_classifier)
+
+        action = WebpageAction(*args)
+
         if not peserve_uri:
             read_url = to_base_url(read_url)
 
@@ -76,7 +85,7 @@ def main(url, urls_file_path, export_path,
         crawl_inputs += [(
             export_path_for_url,
             read_url,
-            WebpageAction(action_type, export_path_for_url),
+            action,
             crawl_options)]
 
     print(f'INFO: PID: {os.getpid()!r}')
@@ -96,6 +105,10 @@ def main(url, urls_file_path, export_path,
 
 if __name__ == "__main__":
     import argparse
+
+    action_choices = [at.name.lower() for at in list(WebpageActionType)]
+    action_choices.remove(WebpageActionType.UNKNOWN.name.lower())
+    default_action_choice = next(filter(lambda c: 'store' in c, action_choices))
 
     parser = argparse.ArgumentParser(
         description='Crawl website and do something with for each page',
@@ -133,11 +146,11 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '-a', '--action',
-        help="Action to perform at a time of visiting the page",
+        help="Action to perform at a time of visiting the page  (default: %(default)s)",
         required=False,
         dest='action',
-        choices=['screenshot_and_store'],
-        default='screenshot_and_store',
+        choices=action_choices,
+        default=default_action_choice,
         type=str)
     parser.add_argument(
         '-b', '--buffer',
@@ -161,6 +174,14 @@ if __name__ == "__main__":
         required=False,
         dest='export_path',
         default='./results')
+    parser.add_argument(
+        '-ic', '--image-classifier',
+        help="Image classifier to be used for identifying profile pages (default: %(default)s)",
+        required=False,
+        dest='image_classifier',
+        choices=constants.IMAGE_CLASSIFIERS,
+        default=constants.IMAGE_CLASSIFIERS[0],
+        type=str)
     parser.add_argument(
         '-cs', '--crawl-sleep',
         help='Time to sleep between each page visit (default: %(default)s)',
@@ -244,10 +265,8 @@ if __name__ == "__main__":
               The current directory has been set as the export directory
               ''')
 
-    # map action choice to corresponding function
-    action_type = WebpageActionType.UNKNOWN
-    if args.action == 'screenshot_and_store':
-        action_type = WebpageActionType.SCREENSHOT_AND_STORE
+    # map action str to enum
+    action_type = getattr(WebpageActionType, args.action.upper(), None)
 
     try:
         main(
@@ -262,7 +281,8 @@ if __name__ == "__main__":
             bump_relevant=args.bump_relevant,
             peserve_uri=args.peserve_uri,
             use_buffer=args.use_buffer,
-            action_type=action_type)
+            action_type=action_type,
+            image_classifier=args.image_classifier)
     except KeyboardInterrupt:
         print('\nINFO: Exited')
     else:

@@ -16,6 +16,7 @@ constants = ConstantsNamespace
 class PageLink:
     url: str
     depth: int
+    parent_url: str = None
 
 
 def is_valid(url, base_url):
@@ -54,7 +55,7 @@ def to_abs_path(page_links, base_url, current_link):
     # fix relative links or links that start with '/'
     abs_links = []
     for pl in page_links:
-        link, depth = pl.url, pl.depth
+        link, depth, parent_url = pl.url, pl.depth, pl.parent_url
         fixed_link = ''
         if link.startswith('http'):
             fixed_link = link
@@ -72,7 +73,7 @@ def to_abs_path(page_links, base_url, current_link):
                 if current_link[-1] != '/':
                     link = '/' + link
                 fixed_link = current_link + link
-        abs_links += [PageLink(fixed_link, depth)]
+        abs_links += [PageLink(fixed_link, depth, parent_url)]
 
     return abs_links
 

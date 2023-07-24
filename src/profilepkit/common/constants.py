@@ -54,3 +54,14 @@ class ConstantsNamespace:
     # Suffix that is added to filename if file with default filename is present
     PRINT_SUFFIX_MIN = 100_000
     PRINT_SUFFIX_MAX = 999_999
+
+    # Threshold value for detecting positive class
+    PREDICTION_THRESHOLD = 0.5
+
+    # Threshold for number of subpages of an URL that are classified as profile page,
+    # after which the URL is considered as the origin page for all profile pages
+    ORIGIN_PAGE_THRESHOLD = 3
+
+    IMAGE_CLASSIFIERS = [
+        'scooby',
+        'batman']

@@ -47,6 +47,15 @@ Documentation = "https://github.com/todorovicsrdjan/profilepkit#readme"
 Issues = "https://github.com/todorovicsrdjan/profilepkit/issues"
 Source = "https://github.com/todorovicsrdjan/profilepkit"
 
+[tool.hatch.build]
+include = [
+  "**/*.py",
+  "**/*.h5"
+]
+exclude = [
+  "tests/**",
+]
+
 [tool.hatch.version]
 path = "src/profilepkit/__about__.py"
 

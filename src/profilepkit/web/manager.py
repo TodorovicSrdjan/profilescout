@@ -1,12 +1,79 @@
+from enum import Enum
 from selenium.common.exceptions import WebDriverException
 
-from web.webpage import Webpage
+from web.webpage import Webpage, WebpageActionType
 from common.constants import ConstantsNamespace
 from common.exceptions import parse_web_driver_exception
 from link.utils import PageLink, remove_duplicates, prioritize_relevant, to_abs_path
 from link.utils import filter_out_invalid, filter_out_visited, filter_out_present_links, filter_out_long
 
+
 constants = ConstantsNamespace
+
+CrawlStatus = Enum('CrawlStatus', ['EXIT', 'CONTINUE', 'SKIP_SUBLINKS'])
+
+
+class ActionManager:
+    def __init__(self, web_driver, base_url, out_file, err_file):
+        self.web_driver = web_driver
+        self.base_url = base_url
+
+        self.__out_file = out_file
+        self.__err_file = err_file
+
+    def __get_crawl_status(self, result, page, action_type):
+        if (
+            action_type == WebpageActionType.SCREENSHOT_AND_STORE  # or
+            # action_type == WebpageActionType.SCREENSHOT
+        ):
+            if not result.successful:
+                return CrawlStatus.SKIP_SUBLINKS  # TODO revisit
+
+        elif action_type == WebpageActionType.FIND_ORIGIN:
+            profile_detected = result.val
+            if result.successful and profile_detected:
+                if not hasattr(self, '_ActionManager__origin_candidates'):
+                    self.__origin_candidates = {}
+
+                # assume that this is initial page
+                origin = page.link.url
+
+                parent_url = page.link.parent_url
+                if parent_url is not None:
+                    origin = parent_url
+
+                if origin not in self.__origin_candidates:
+                    self.__origin_candidates[origin] = 1
+                else:
+                    self.__origin_candidates[origin] += 1
+
+                # check if the profile page origin is found
+                children_count = self.__origin_candidates[origin]
+
+                if children_count == constants.ORIGIN_PAGE_THRESHOLD:
+                    result.val = origin
+                    result.msg = f'Found profile page origin at {origin!r}'
+                    return CrawlStatus.EXIT
+
+        return CrawlStatus.CONTINUE
+
+    def perform_action(self, page, action):
+        result = None
+        if action.action_type != WebpageActionType.UNKNOWN and hasattr(action.func, "__name__"):
+            result = getattr(page, action.func.__name__)(*action.args)
+
+        if result is None or not result.successful:
+            action_name = None
+            if action.func is None:
+                action_name = action.action_type.name.lower()
+            else:
+                action_name = action.func.__name__
+            print(f'ERROR: Failed to perform action {action_name!r} for: {page.link.url}', file=self.__err_file)
+
+        crawl_status = self.__get_crawl_status(result, page, action.action_type)
+        result.crawl_status = crawl_status
+
+        return result
 
 
 class CrawlManager:
@@ -18,7 +85,7 @@ class CrawlManager:
         self.bump_relevant = False
 
         page_link = PageLink(base_url, 0)
-        self.curr_page = Webpage(web_driver, page_link, err_file)
+        self.curr_page = Webpage(web_driver, page_link, out_file, err_file)
 
         self.__scraped_count = 0
         self.__visited_links = set()
@@ -28,7 +95,7 @@ class CrawlManager:
         self.err_file = err_file
 
     def __set_curr_page(self, page_link):
-        self.curr_page = Webpage(self.web_driver, page_link, self.err_file)
+        self.curr_page = Webpage(self.web_driver, page_link, self.out_file, self.err_file)
         return self.curr_page
 
     def has_next(self):
