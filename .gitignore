@@ -165,3 +165,4 @@ cython_debug/
 # Custom
 
 docs/links 
+classifiers/

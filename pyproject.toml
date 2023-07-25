@@ -49,11 +49,11 @@ Source = "https://github.com/todorovicsrdjan/profilepkit"
 
 [tool.hatch.build]
 include = [
-  "**/*.py",
-  "**/*.h5"
+  "**/*.py"
 ]
 exclude = [
   "tests/**",
+  "**/*.h5"
 ]
 
 [tool.hatch.version]
