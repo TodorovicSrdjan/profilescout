@@ -148,9 +148,8 @@ def crawl_website(export_path, base_url, action, options):
     except Exception as e:
         print(f'ERROR: {e!s}', file=err_file)
         print(f'{traceback.format_exc()}', file=err_file)
-    else:
-        print(f'INFO: Crawling of {base_url!r} is complete')
     finally:
         _close_everything(web_driver, out_file, err_file, export_path, options.use_buffer)
+        print(f'INFO: Crawling of {base_url!r} is complete')
 
     return result
