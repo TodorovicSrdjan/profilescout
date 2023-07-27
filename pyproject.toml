@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "profilepkit"
+name = "profilescout"
 dynamic = ["version"]
 description = 'Profile Page Kit is a kit that uses crawling and machine learning to identify profile pages on any website, simplifying the process of extracting user profiles, gathering information, and performing targeted actions.'
 readme = "README.md"
@@ -43,9 +43,9 @@ dependencies = [
 ]  # TODO check if packages that come pre-installed should be listed as deps
 
 [project.urls]
-Documentation = "https://github.com/todorovicsrdjan/profilepkit#readme"
-Issues = "https://github.com/todorovicsrdjan/profilepkit/issues"
-Source = "https://github.com/todorovicsrdjan/profilepkit"
+Documentation = "https://github.com/todorovicsrdjan/profilescout#readme"
+Issues = "https://github.com/todorovicsrdjan/profilescout/issues"
+Source = "https://github.com/todorovicsrdjan/profilescout"
 
 [tool.hatch.build]
 include = [
@@ -57,7 +57,7 @@ exclude = [
 ]
 
 [tool.hatch.version]
-path = "src/profilepkit/__about__.py"
+path = "src/profilescout/__about__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
@@ -87,7 +87,7 @@ dependencies = [
   "ruff>=0.0.243"
 ]
 [tool.hatch.envs.lint.scripts]
-typing = "mypy --install-types --non-interactive {args:src/profilepkit tests}"
+typing = "mypy --install-types --non-interactive {args:src/profilescout tests}"
 style = [
   "ruff {args:.}",
   "black --check --diff {args:.}",
@@ -153,7 +153,7 @@ unfixable = [
 ]
 
 [tool.ruff.isort]
-known-first-party = ["profilepkit"]
+known-first-party = ["profilescout"]
 
 [tool.ruff.flake8-tidy-imports]
 ban-relative-imports = "all"
@@ -163,16 +163,16 @@ ban-relative-imports = "all"
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
 
 [tool.coverage.run]
-source_pkgs = ["profilepkit", "tests"]
+source_pkgs = ["profilescout", "tests"]
 branch = true
 parallel = true
 omit = [
-  "src/profilepkit/__about__.py",
+  "src/profilescout/__about__.py",
 ]
 
 [tool.coverage.paths]
-profilepkit = ["src/profilepkit", "*/profilepkit/src/profilepkit"]
-tests = ["tests", "*/profilepkit/tests"]
+profilescout = ["src/profilescout", "*/profilescout/src/profilescout"]
+tests = ["tests", "*/profilescout/tests"]
 
 [tool.coverage.report]
 exclude_lines = [

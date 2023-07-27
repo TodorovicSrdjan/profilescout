@@ -13,29 +13,29 @@ Third-Party Python packages
 Execute this in project's directory
 ```Bash
 SS_EXPORT_PATH="/path/to/screenshot/dir/"
-docker build -t profilepkit
-docker run -it -v "$SS_EXPORT_PATH":/data profilepkit
+docker build -t profilescout
+docker run -it -v "$SS_EXPORT_PATH":/data profilescout
 ```
 Add `--rm` if you want it to be disposable (one-time task)
 
 Test (inside docker container)
 ```Bash
-python3 src/profilepkit -mp 10 -d 2 -t 1 -ep '/data' -f './links.txt'
+python3 src/profilescout/main.py -mp 10 -d 2 -t 1 -ep '/data' -f './links.txt'
 ```
 
 # Common usage
 
 Crawling relevant and irrelevant pages together
 ```Bash
-python3 src/profilepkit -br -f links.txt -d 2 -mp 300 -ep /data -t `nproc`
+python3 src/profilescout/main.py -br -f links.txt -d 2 -mp 300 -ep /data -t `nproc`
 ```
 
 Crawling relevant by providing list of URLs to collective page
 ```Bash
-python3 src/profilepkit -p -f links.txt -d 1 -ep /data -t `nproc`
+python3 src/profilescout/main.py -p -f links.txt -d 1 -ep /data -t `nproc`
 ```
 
 Crawling relevant by providing list of direct URLs to profile page
 ```Bash
-python3 src/profilepkit -b -p -f links.txt -d 0 -ep /data -t `nproc`
+python3 src/profilescout/main.py -b -p -f links.txt -d 0 -ep /data -t `nproc`
 ```
