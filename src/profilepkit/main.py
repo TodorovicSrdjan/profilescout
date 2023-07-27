@@ -8,7 +8,7 @@ from common.constants import ConstantsNamespace
 from link.utils import to_fqdn, to_base_url
 from web.webpage import WebpageActionType, WebpageAction
 from web.crawl import CrawlOptions, crawl_website
-
+from classification.classifier import CLASSIFIERS_DIR
 
 constants = ConstantsNamespace
 
@@ -259,14 +259,30 @@ if __name__ == "__main__":
         print(f'INFO: Directory {args.export_path!r} already exists')
     except OSError as e:
         args.export_path = os.getcwd()
-        print(f'''
+        parser.error(f'''
               ERROR: Unable create directory at {args.export_path!r}
               (reason: {e.strerror if hasattr(e, "strerror") else "unknown"}).
               The current directory has been set as the export directory
               ''')
+        sys.exit()
 
     # map action str to enum
     action_type = getattr(WebpageActionType, args.action.upper(), None)
+    
+    try:
+        if not os.listdir(CLASSIFIERS_DIR):
+            h5_files = [file for file in os.listdir(CLASSIFIERS_DIR) if file.endswith('.h5')]
+
+            if len(h5_files) == 0:
+                parser.error(f'Directory {CLASSIFIERS_DIR!r} does not contain any .h5 files');
+                sys.exit()
+                
+            if args.image_classifier not in h5_files:
+                parser.error(f'Model \'{args.image_classifier}.h5\' is not found at {CLASSIFIERS_DIR!r}');
+                sys.exit()
+    except FileNotFoundError:
+        parser.error(f'Directory {CLASSIFIERS_DIR!r} is not present');
+        sys.exit()
 
     try:
         main(
