@@ -9,12 +9,13 @@ from link.utils import to_fqdn, to_base_url
 from web.webpage import WebpageActionType, WebpageAction, ScrapeOption
 from web.crawl import CrawlOptions, crawl_website
 from classification.classifier import CLASSIFIERS_DIR
+from extraction.htmlextract import get_resumes_from_dir
 
 
 constants = ConstantsNamespace
 
 
-def main(url, urls_file_path, export_path,
+def main(url, urls_file_path, export_path, directory,
          crawl_sleep,
          depth, max_pages, max_threads,
          include_fragment, bump_relevant, peserve_uri, use_buffer,
@@ -23,6 +24,12 @@ def main(url, urls_file_path, export_path,
     user_inputs = []
     crawl_inputs = []
     constants = ConstantsNamespace()
+
+    if directory is not None:
+        if export_path == '': export_path = None
+        resumes = get_resumes_from_dir(directory, export_path)
+        print(resumes)
+        return
 
     if urls_file_path is None:
         user_inputs += [(url, depth, crawl_sleep)]
@@ -148,6 +155,13 @@ if __name__ == "__main__":
         help='Path to the file with URLs of the websites to crawl',
         required=False,
         dest='urls_file_path',
+        default=None,
+        type=str)
+    input_group.add_argument(
+        '-D', '--directory',
+        help="Extract data from HTML files in the directory. To avoid saving output, set '-ep'/'--export-path' to ''",
+        required=False,
+        dest='directory',
         default=None,
         type=str)
 
@@ -301,31 +315,33 @@ if __name__ == "__main__":
         args.export_path = os.getcwd()
         parser.error(f'''
               ERROR: Unable create directory at {args.export_path!r}
-              (reason: {e.strerror if hasattr(e, "strerror") else "unknown"}).
-              The current directory has been set as the export directory
-              ''')
-        sys.exit()
+            (reason: {e.strerror if hasattr(e, "strerror") else "unknown"}).
+            The current directory has been set as the export directory
+            ''')
+        export_path = '.'
 
-    # check for classifier dir and file presence
-    try:
-        if not os.listdir(CLASSIFIERS_DIR):
-            h5_files = [file for file in os.listdir(CLASSIFIERS_DIR) if file.endswith('.h5')]
+    if args.directory is None:
+        # check for classifier dir and file presence
+        try:
+            if not os.listdir(CLASSIFIERS_DIR):
+                h5_files = [file for file in os.listdir(CLASSIFIERS_DIR) if file.endswith('.h5')]
 
-            if len(h5_files) == 0:
-                parser.error(f'Directory {CLASSIFIERS_DIR!r} does not contain any .h5 files')
-                sys.exit()
+                if len(h5_files) == 0:
+                    parser.error(f'Directory {CLASSIFIERS_DIR!r} does not contain any .h5 files')
+                    sys.exit()
 
-            if args.image_classifier not in h5_files:
-                parser.error(f'Model \'{args.image_classifier}.h5\' is not found at {CLASSIFIERS_DIR!r}')
-                sys.exit()
-    except FileNotFoundError:
-        parser.error(f'Directory {CLASSIFIERS_DIR!r} is not present')
-        sys.exit()
+                if args.image_classifier not in h5_files:
+                    parser.error(f'Model \'{args.image_classifier}.h5\' is not found at {CLASSIFIERS_DIR!r}')
+                    sys.exit()
+        except FileNotFoundError:
+            parser.error(f'Directory {CLASSIFIERS_DIR!r} is not present')
+            sys.exit()
 
     try:
         main(
             url=args.url,
             urls_file_path=args.urls_file_path,
+            directory=args.directory,
             export_path=args.export_path,
             crawl_sleep=args.crawl_sleep,
             depth=args.depth,
