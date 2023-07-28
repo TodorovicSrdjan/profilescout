@@ -19,7 +19,7 @@ WebpageActionType = Enum(
      'WebpageActionType', [
          'UNKNOWN',
          'SCRAPE_PAGES',
-         'SCRAPE_INFO',
+         'SCRAPE_PROFILES',
          'FIND_ORIGIN']
 )
 
@@ -42,8 +42,6 @@ class WebpageAction:
     def __type_to_func(self):
         if self.action_type == WebpageActionType.SCRAPE_PAGES:
             return Webpage.scrape_page
-        # if self.action_type == WebpageActionType.SCRAPE_INFO:
-        #     return Webpage.
         elif self.action_type == WebpageActionType.FIND_ORIGIN:
             return Webpage.is_profile
 

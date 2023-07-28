@@ -10,7 +10,7 @@ from link.utils import filter_out_invalid, filter_out_visited, filter_out_presen
 
 constants = ConstantsNamespace
 
-CrawlStatus = Enum('CrawlStatus', ['EXIT', 'CONTINUE', 'SKIP_SUBLINKS'])
+CrawlStatus = Enum('CrawlStatus', ['CONTINUE', 'NEXT_ACTION', 'NEXT_STAGE', 'SKIP_SUBLINKS'])
 
 
 class ActionManager:
@@ -43,7 +43,7 @@ class ActionManager:
                 if children_count == constants.ORIGIN_PAGE_THRESHOLD:
                     result.val = origin
                     result.msg = f'Found profile page origin at {origin!r}'
-                    return CrawlStatus.EXIT
+                    return CrawlStatus.NEXT_STAGE
 
         return CrawlStatus.CONTINUE
 
@@ -95,6 +95,13 @@ class CrawlManager:
 
     def has_next(self):
         return len(self.__links_to_visit) > 0
+
+    def clear_history(self, init_page=None):
+        self.__scraped_count = 0
+        self.__visited_links = set()
+
+        link = init_page if init_page is not None else self.curr_page
+        self.__links_to_visit = [link]
 
     def set_options(self, max_depth=None, max_pages=None, bump_relevant=None):
         self.__max_depth = max_depth if max_depth is not None else self.__max_depth

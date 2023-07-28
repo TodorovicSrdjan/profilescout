@@ -73,7 +73,7 @@ def _create_out_and_err_files(export_path):
     return out_file, err_file
 
 
-def crawl_website(export_path, base_url, action, options):
+def crawl_website(export_path, base_url, plan):
     '''A function to crawl links up to a maximum depth'''
     result = None
     web_driver = None
@@ -93,7 +93,7 @@ def crawl_website(export_path, base_url, action, options):
 
         if export_path_exists:
             # open log files for writing if the directory is created
-            if options.use_buffer:
+            if plan.options.use_buffer:
                 out_file = StringIO()
                 err_file = StringIO()
             else:
@@ -102,7 +102,7 @@ def crawl_website(export_path, base_url, action, options):
         else:
             export_path = '.'
 
-        if options.scraping:
+        if plan.options.scraping:
             try:
                 os.mkdir(os.path.join(export_path, 'html'))
                 os.mkdir(os.path.join(export_path, 'screenshots'))
@@ -112,16 +112,16 @@ def crawl_website(export_path, base_url, action, options):
         crawl_manager = CrawlManager(web_driver, base_url, out_file, err_file)
         crawl_manager.set_options(
             plan.options.max_depth,
-            plan.options.max_pages, 
+            plan.options.max_pages,
             plan.options.bump_relevant)
 
-        action_manager = ActionManager(web_driver, base_url, out_file, err_file)
+        action_manager = ActionManager(out_file, err_file)
 
         # iterates until there aren't any links to be visited
         # if max depth is reached link extraction is ignored and all links up to that depth are visited and saved
         while True:
             if not crawl_manager.has_next():
-                print(f'INFO: All links at a depth of {options.max_depth} have been visited.',
+                print(f'INFO: All links at a depth of {plan.options.max_depth} have been visited.',
                       'Stopping the crawling...',
                       file=out_file)
                 break
@@ -133,12 +133,15 @@ def crawl_website(export_path, base_url, action, options):
             print(f'{curr_page_link.depth} {curr_page_link.url}', file=out_file, flush=True)
 
             # perform action on visited page
-            action_result = action_manager.perform_action(crawl_manager.curr_page, action)
+            if plan.action_allowed():
+                action_result = action_manager.perform_action(crawl_manager.curr_page, plan.get_curr_action())
 
-            if action_result.crawl_status == CrawlStatus.EXIT:
+            if action_result.crawl_status == CrawlStatus.NEXT_STAGE:
                 result = action_result.val
                 print(f'INFO: {action_result.msg}', file=out_file)
-                break
+                has_next = plan.next_stage(crawl_manager, result)
+                if not has_next:
+                    break
 
             if action_result.successful:
                 crawl_manager.increase_count()
@@ -146,19 +149,71 @@ def crawl_website(export_path, base_url, action, options):
                     break
 
             if action_result.crawl_status != CrawlStatus.SKIP_SUBLINKS:
-                crawl_manager.queue_sublinks(options.include_fragment)
+                crawl_manager.queue_sublinks(plan.options.include_fragment)
 
             out_file.flush()
             err_file.flush()
 
-            time.sleep(options.crawl_sleep)
+            time.sleep(plan.options.crawl_sleep)
     except RemoteDisconnected as rde:
         print(f'INFO: Interrupted. Exiting... ({rde!r})', file=err_file)
     except Exception as e:
         print(f'ERROR: {e!s}', file=err_file)
         print(f'{traceback.format_exc()}', file=err_file)
     finally:
-        _close_everything(web_driver, out_file, err_file, export_path, options.use_buffer)
+        _close_everything(web_driver, out_file, err_file, export_path, plan.options.use_buffer)
         print(f'INFO: Crawling of {base_url!r} is complete')
 
     return result
+
+
+class CrawlPlan:
+    def __init__(self, options, stages, actions):
+        self.__stages = stages
+        self.__actions = actions
+
+        self.__current_stage_index = 0
+        self.__current_action_index = 0
+
+        self.__init_page = None
+        self.__clear_history = False
+        self.__skip_next_page_action = False
+        self.__current_action = actions[0]
+
+        self.options = options
+
+    def get_curr_action(self):
+        return self.__current_action
+
+    def next_stage(self, crawl_manager, prev_stage_result):
+        if len(self.__stages) == self.__current_action_index:
+            return False
+
+        update = self.__stages[self.__current_stage_index]
+        update(self, prev_stage_result)
+
+        if self.__clear_history:
+            crawl_manager.clear_history(self.__init_page)
+        # update crawl options
+        max_depth = self.options.max_depth
+        max_pages = self.options.max_pages
+        bump_relevant = self.options.bump_relevant
+        crawl_manager.set_options(max_depth, max_pages, bump_relevant)
+
+        self.__current_stage_index += 1
+
+        return self.next_action()
+
+    def next_action(self):
+        if len(self.__actions) == self.__current_action_index:
+            return False
+
+        self.__current_action_index += 1
+        self.__current_action = self.__actions[self.__current_action_index]
+        return True
+
+    def action_allowed(self):
+        if self.__skip_next_page_action:
+            self.__skip_next_page_action = False
+            return False
+        return True

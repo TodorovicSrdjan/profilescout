@@ -7,12 +7,19 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from common.constants import ConstantsNamespace
 from link.utils import to_fqdn, to_base_url
 from web.webpage import WebpageActionType, WebpageAction, ScrapeOption
-from web.crawl import CrawlOptions, crawl_website
+from web.crawl import CrawlOptions, CrawlPlan, crawl_website
 from classification.classifier import CLASSIFIERS_DIR
 from extraction.htmlextract import get_resumes_from_dir
 
 
 constants = ConstantsNamespace
+
+
+def scrape_profiles_transition(plan, prev_result):
+    plan.__clear_history = True
+    plan.__init_page = prev_result
+    plan.__skip_next_page_action = True
+    plan.options.max_depth = 1  # visit just sublinks
 
 
 def main(url, urls_file_path, export_path, directory,
@@ -26,7 +33,8 @@ def main(url, urls_file_path, export_path, directory,
     constants = ConstantsNamespace()
 
     if directory is not None:
-        if export_path == '': export_path = None
+        if export_path == '':
+            export_path = None
         resumes = get_resumes_from_dir(directory, export_path)
         print(resumes)
         return
@@ -72,14 +80,23 @@ def main(url, urls_file_path, export_path, directory,
         output_fname = to_fqdn(read_url)
         export_path_for_url = os.path.join(export_path, output_fname)
 
-        args = [action_type]
-        if action_type == WebpageActionType.SCRAPE_PAGES:
-            scraping = True
-            args.extend([export_path_for_url, scrape_option, *resolution])
-        elif action_type == WebpageActionType.FIND_ORIGIN:
-            args.extend([image_classifier, *resolution])
+        stages = []
+        actions = []
+        scraping = True
+        if action_type != WebpageActionType.SCRAPE_PROFILES:
+            args = [action_type]
+            if action_type == WebpageActionType.SCRAPE_PAGES:
+                args.extend([export_path_for_url, scrape_option, *resolution])
+            elif action_type == WebpageActionType.FIND_ORIGIN:
+                scraping = False
+                args.extend([image_classifier, *resolution])
+            actions = [WebpageAction(*args)]
+        else:
+            find_origin_args = [WebpageActionType.FIND_ORIGIN, image_classifier, *resolution]
+            scrape_profils_args = [WebpageActionType.SCRAPE_PAGES, export_path_for_url, scrape_option, *resolution]
+            actions = [WebpageAction(*find_origin_args), WebpageAction(*scrape_profils_args)]
 
-        action = WebpageAction(*args)
+            stages = [scrape_profiles_transition]
 
         if not peserve_uri:
             read_url = to_base_url(read_url)
@@ -93,11 +110,12 @@ def main(url, urls_file_path, export_path, directory,
             use_buffer=use_buffer,
             scraping=scraping)
 
+        plan = CrawlPlan(crawl_options, stages, actions)
+
         crawl_inputs += [(
             export_path_for_url,
             read_url,
-            action,
-            crawl_options)]
+            plan)]
 
     print(f'INFO: PID: {os.getpid()!r}')
     print('INFO: Start submitting URls for crawling...')
