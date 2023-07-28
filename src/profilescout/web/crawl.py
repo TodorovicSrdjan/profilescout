@@ -110,9 +110,10 @@ def crawl_website(export_path, base_url, action, options):
                 pass
 
         crawl_manager = CrawlManager(web_driver, base_url, out_file, err_file)
-        crawl_manager.max_depth = options.max_depth
-        crawl_manager.max_pages = options.max_pages
-        crawl_manager.bump_relevant = options.bump_relevant
+        crawl_manager.set_options(
+            plan.options.max_depth,
+            plan.options.max_pages, 
+            plan.options.bump_relevant)
 
         action_manager = ActionManager(web_driver, base_url, out_file, err_file)
 

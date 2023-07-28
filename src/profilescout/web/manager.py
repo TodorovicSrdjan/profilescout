@@ -14,10 +14,7 @@ CrawlStatus = Enum('CrawlStatus', ['EXIT', 'CONTINUE', 'SKIP_SUBLINKS'])
 
 
 class ActionManager:
-    def __init__(self, web_driver, base_url, out_file, err_file):
-        self.web_driver = web_driver
-        self.base_url = base_url
-
+    def __init__(self, out_file, err_file):
         self.__out_file = out_file
         self.__err_file = err_file
 
@@ -76,11 +73,11 @@ class ActionManager:
 
 class CrawlManager:
     def __init__(self, web_driver, base_url, out_file, err_file, max_depth=3, max_pages=None):
-        self.web_driver = web_driver
-        self.base_url = base_url
-        self.max_depth = max_depth
-        self.max_pages = max_pages
-        self.bump_relevant = False
+        self.__web_driver = web_driver
+        self.__base_url = base_url
+        self.__max_depth = max_depth
+        self.__max_pages = max_pages
+        self.__bump_relevant = False
 
         page_link = PageLink(base_url, 0)
         self.curr_page = Webpage(web_driver, page_link, out_file, err_file)
@@ -93,15 +90,20 @@ class CrawlManager:
         self.err_file = err_file
 
     def __set_curr_page(self, page_link):
-        self.curr_page = Webpage(self.web_driver, page_link, self.out_file, self.err_file)
+        self.curr_page = Webpage(self.__web_driver, page_link, self.out_file, self.err_file)
         return self.curr_page
 
     def has_next(self):
         return len(self.__links_to_visit) > 0
 
+    def set_options(self, max_depth=None, max_pages=None, bump_relevant=None):
+        self.__max_depth = max_depth if max_depth is not None else self.__max_depth
+        self.__max_pages = max_pages if max_pages is not None else self.__max_pages
+        self.__bump_relevant = bump_relevant if bump_relevant is not None else self.__bump_relevant
+
     def is_page_max_reached(self):
-        if self.max_pages is not None and self.__scraped_count == self.max_pages:
-            print(f'INFO: Maximum number of pages to scrape ({self.max_pages}) reached.',
+        if self.__max_pages is not None and self.__scraped_count == self.__max_pages:
+            print(f'INFO: Maximum number of pages to scrape ({self.__max_pages}) reached.',
                   'Stopping the crawling...',
                   file=self.out_file)
             print(f'INFO: There were {len(self.__links_to_visit)} unvisited links in the queue',
@@ -141,15 +143,15 @@ class CrawlManager:
     def queue_sublinks(self, include_fragment=False):
 
         # check if the maximum depth (number of hops) has been reached
-        if self.curr_page.link.depth == self.max_depth:
+        if self.curr_page.link.depth == self.__max_depth:
             # ignore links on the current page and continue with visiting links that left to be visited
             return None
 
-        hops = self.curr_page.extract_links(self.base_url, include_fragment)
+        hops = self.curr_page.extract_links(self.__base_url, include_fragment)
 
         # transform extracted URLs, as some of them may be invalid or irrelevant
-        hops_with_abs_path = to_abs_path(hops, self.base_url, self.curr_page.link.url)
-        valid = filter_out_invalid(hops_with_abs_path, self.base_url)
+        hops_with_abs_path = to_abs_path(hops, self.__base_url, self.curr_page.link.url)
+        valid = filter_out_invalid(hops_with_abs_path, self.__base_url)
         valid_not_visited = filter_out_visited(valid, self.__visited_links)
         new_links = filter_out_present_links(valid_not_visited, self.__links_to_visit)
         new_links = filter_out_long(new_links, self.err_file)
@@ -157,7 +159,7 @@ class CrawlManager:
 
         self.__links_to_visit.extend(new_links)
 
-        if self.bump_relevant:
+        if self.__bump_relevant:
             self.__links_to_visit = prioritize_relevant(self.__links_to_visit)
 
         return self.__links_to_visit
