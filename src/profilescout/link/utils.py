@@ -79,6 +79,13 @@ def to_abs_path(page_links, base_url, current_link):
     return abs_links
 
 
+def to_key(url):
+    result = tldextract.extract(url)
+    if result.subdomain in ['', 'www']:
+        return result.domain
+    return f'{result.domain}-{result.subdomain}'
+
+
 def to_fqdn(url):
     return tldextract.extract(url).fqdn
 

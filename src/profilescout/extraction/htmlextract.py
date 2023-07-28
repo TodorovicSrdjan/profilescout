@@ -9,12 +9,13 @@ from html2text import HTML2Text
 from collections import defaultdict
 from phonenumbers import PhoneNumberMatcher, PhoneNumberFormat, format_number, parse
 
+from link.utils import to_key
 
 TAGS_TO_EXCLUDE = ['b', 'i', 'strong', 'em', 'blockquote',
                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
 
 PATTERNS = {'unwanted_tag__has_placeholder': r'(?:<PLACEHOLDER.*?>)?(.*?)(?:</PLACEHOLDER>)?',
-            'md_link': r'^\[(.+)\]\((.+)\)$',
+            'md_link': r'\[(.*)\]\((.+)\)',
             'email': r'^([a-z0-9_\.\+-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$',
             'different_line': r'^\+*([^+]*\w+.*)$',
             'label_field': r'^\w.*:$',
@@ -198,10 +199,13 @@ def __parse_differences(differences, country_code=None):
             link = match_md_link.group(2).strip()
             if 'mailto:' in link:
                 if link not in resume['emails']:
-                    link = link.replace('mailto:', '')
+                    link = link.replace('mailto:', '').strip()
                     resume['emails'].append(link)
             else:
-                link = {match_md_link.group(1).strip(): link}
+                key = match_md_link.group(1)
+                if key.strip() == '':
+                    key = to_key(link)
+                link = {key: link}
                 resume['links'].append(link)
         elif not match_label_field:
             resume['other'].append(difference)
