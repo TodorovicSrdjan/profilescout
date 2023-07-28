@@ -6,9 +6,10 @@ from concurrent.futures import ThreadPoolExecutor, wait
 
 from common.constants import ConstantsNamespace
 from link.utils import to_fqdn, to_base_url
-from web.webpage import WebpageActionType, WebpageAction
+from web.webpage import WebpageActionType, WebpageAction, ScrapeOption
 from web.crawl import CrawlOptions, crawl_website
 from classification.classifier import CLASSIFIERS_DIR
+
 
 constants = ConstantsNamespace
 
@@ -17,7 +18,7 @@ def main(url, urls_file_path, export_path,
          crawl_sleep,
          depth, max_pages, max_threads,
          include_fragment, bump_relevant, peserve_uri, use_buffer,
-         action_type,
+         action_type, scrape_option,
          resolution, image_classifier):
     user_inputs = []
     crawl_inputs = []
@@ -59,13 +60,15 @@ def main(url, urls_file_path, export_path,
         use_buffer = True
 
     # prepare crawl inputs
+    scraping = False
     for read_url, read_depth, read_crawl_sleep in user_inputs:
         output_fname = to_fqdn(read_url)
         export_path_for_url = os.path.join(export_path, output_fname)
 
         args = [action_type]
-        if action_type == WebpageActionType.SCREENSHOT_AND_STORE:
-            args.extend([export_path_for_url, *resolution])
+        if action_type == WebpageActionType.SCRAPE_PAGES:
+            scraping = True
+            args.extend([export_path_for_url, scrape_option, *resolution])
         elif action_type == WebpageActionType.FIND_ORIGIN:
             args.extend([image_classifier, *resolution])
 
@@ -75,12 +78,13 @@ def main(url, urls_file_path, export_path,
             read_url = to_base_url(read_url)
 
         crawl_options = CrawlOptions(
-            read_depth,
-            max_pages,
-            read_crawl_sleep,
-            include_fragment,
-            bump_relevant,
-            use_buffer)
+            max_depth=read_depth,
+            max_pages=max_pages,
+            crawl_sleep=read_crawl_sleep,
+            include_fragment=include_fragment,
+            bump_relevant=bump_relevant,
+            use_buffer=use_buffer,
+            scraping=scraping)
 
         crawl_inputs += [(
             export_path_for_url,
@@ -106,9 +110,12 @@ def main(url, urls_file_path, export_path,
 if __name__ == "__main__":
     import argparse
 
+    scrape_choices = [so.name.lower() for so in list(ScrapeOption)]
+    default_scrape_choice = ScrapeOption.ALL.name.lower()
+
     action_choices = [at.name.lower() for at in list(WebpageActionType)]
     action_choices.remove(WebpageActionType.UNKNOWN.name.lower())
-    default_action_choice = next(filter(lambda c: 'store' in c, action_choices))
+    default_action_choice = WebpageActionType.SCRAPE_PAGES.name.lower()
 
     parser = argparse.ArgumentParser(
         description='Crawl website and do something with for each page',
@@ -146,7 +153,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '-a', '--action',
-        help="Action to perform at a time of visiting the page  (default: %(default)s)",
+        help="Action to perform at a time of visiting the page (default: %(default)s)",
         required=False,
         dest='action',
         choices=action_choices,
@@ -219,6 +226,14 @@ if __name__ == "__main__":
         default=None,
         type=str)
     parser.add_argument(
+        '-so', '--scrape-option',
+        help="Data to be scraped (default: %(default)s)",
+        required=False,
+        dest='scrape_option',
+        choices=scrape_choices,
+        default=default_scrape_choice,
+        type=str)
+    parser.add_argument(
         '-t', '--threads',
         help="Maximum number of threads to use if '-f'/'--file' is provided (default: %(default)s)",
         required=False,
@@ -259,15 +274,23 @@ if __name__ == "__main__":
             parser.error("url should start with 'http://' or 'https://'")
             sys.exit()
 
+    # validate resolution
     args.resolution = args.resolution.split('x')
-    if (len(args.resolution) < 2 
-    or not args.resolution[0].isdigit()
-    or args.resolution[0][0] == '0'
-    or not args.resolution[1].isdigit()
-    or args.resolution[1][0] == '0'
+    if (
+        len(args.resolution) < 2
+        or not args.resolution[0].isdigit()
+        or args.resolution[0][0] == '0'
+        or not args.resolution[1].isdigit()
+        or args.resolution[1][0] == '0'
     ):
         parser.error("valid format for resolution: WIDTHxHEIGHT. Example: 2880x1620")
         sys.exit()
+
+    # map action str to enum
+    action_type = getattr(WebpageActionType, args.action.upper(), None)
+
+    # map scrape option str to enum
+    scrape_option = getattr(ScrapeOption, args.scrape_option.upper(), None)
 
     # create export dir if not present
     try:
@@ -283,22 +306,20 @@ if __name__ == "__main__":
               ''')
         sys.exit()
 
-    # map action str to enum
-    action_type = getattr(WebpageActionType, args.action.upper(), None)
-    
+    # check for classifier dir and file presence
     try:
         if not os.listdir(CLASSIFIERS_DIR):
             h5_files = [file for file in os.listdir(CLASSIFIERS_DIR) if file.endswith('.h5')]
 
             if len(h5_files) == 0:
-                parser.error(f'Directory {CLASSIFIERS_DIR!r} does not contain any .h5 files');
+                parser.error(f'Directory {CLASSIFIERS_DIR!r} does not contain any .h5 files')
                 sys.exit()
-                
+
             if args.image_classifier not in h5_files:
-                parser.error(f'Model \'{args.image_classifier}.h5\' is not found at {CLASSIFIERS_DIR!r}');
+                parser.error(f'Model \'{args.image_classifier}.h5\' is not found at {CLASSIFIERS_DIR!r}')
                 sys.exit()
     except FileNotFoundError:
-        parser.error(f'Directory {CLASSIFIERS_DIR!r} is not present');
+        parser.error(f'Directory {CLASSIFIERS_DIR!r} is not present')
         sys.exit()
 
     try:
@@ -315,6 +336,7 @@ if __name__ == "__main__":
             peserve_uri=args.peserve_uri,
             use_buffer=args.use_buffer,
             action_type=action_type,
+            scrape_option=scrape_option,
             resolution=args.resolution,
             image_classifier=args.image_classifier)
     except KeyboardInterrupt:

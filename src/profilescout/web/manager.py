@@ -21,15 +21,8 @@ class ActionManager:
         self.__out_file = out_file
         self.__err_file = err_file
 
-    def __get_crawl_status(self, result, page, action_type):
-        if (
-            action_type == WebpageActionType.SCREENSHOT_AND_STORE  # or
-            # action_type == WebpageActionType.SCREENSHOT
-        ):
-            if not result.successful:
-                return CrawlStatus.SKIP_SUBLINKS  # TODO revisit
-
-        elif action_type == WebpageActionType.FIND_ORIGIN:
+    def __process_result(self, result, page, action_type):
+        if action_type == WebpageActionType.FIND_ORIGIN:
             profile_detected = result.val
             if result.successful and profile_detected:
                 if not hasattr(self, '_ActionManager__origin_candidates'):
@@ -57,11 +50,16 @@ class ActionManager:
 
         return CrawlStatus.CONTINUE
 
-    def perform_action(self, page, action):
+    def __perform(self, page, action):
         result = None
         if action.action_type != WebpageActionType.UNKNOWN and hasattr(action.func, "__name__"):
-            result = getattr(page, action.func.__name__)(*action.args)
+            func = getattr(page, action.func.__name__)
+            result = func(*action.args)
 
+        return result
+
+    def perform_action(self, page, action):
+        result = self.__perform(page, action)
         if result is None or not result.successful:
             action_name = None
             if action.func is None:
@@ -70,7 +68,7 @@ class ActionManager:
                 action_name = action.func.__name__
             print(f'ERROR: Failed to perform action {action_name!r} for: {page.link.url}', file=self.__err_file)
 
-        crawl_status = self.__get_crawl_status(result, page, action.action_type)
+        crawl_status = self.__process_result(result, page, action.action_type)
         result.crawl_status = crawl_status
 
         return result

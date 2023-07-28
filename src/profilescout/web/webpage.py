@@ -9,8 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import WebDriverException, StaleElementReferenceException
 
 from common.constants import ConstantsNamespace
-from common.exceptions import LongFilenameException
-from link.utils import PageLink, to_filename, is_valid
+from link.utils import PageLink, is_valid, url2file_path
 from classification.classifier import ImageClassifier
 
 
@@ -19,9 +18,12 @@ constants = ConstantsNamespace
 WebpageActionType = Enum(
      'WebpageActionType', [
          'UNKNOWN',
-         'SCREENSHOT_AND_STORE',
+         'SCRAPE_PAGES',
+         'SCRAPE_INFO',
          'FIND_ORIGIN']
 )
+
+ScrapeOption = Enum('ScrapeOption', ['ALL', 'HTML', 'SCREENSHOT'])
 
 
 class ActionResult:
@@ -38,8 +40,10 @@ class WebpageAction:
         self.func = self.__type_to_func()
 
     def __type_to_func(self):
-        if self.action_type == WebpageActionType.SCREENSHOT_AND_STORE:
-            return Webpage.take_screenshot_and_store
+        if self.action_type == WebpageActionType.SCRAPE_PAGES:
+            return Webpage.scrape_page
+        # if self.action_type == WebpageActionType.SCRAPE_INFO:
+        #     return Webpage.
         elif self.action_type == WebpageActionType.FIND_ORIGIN:
             return Webpage.is_profile
 
@@ -77,47 +81,53 @@ class Webpage:
 
         return False
 
-    def __get_valid_img_path(self, export_path, width=constants.WIDTH, height=constants.HEIGHT):
-        self.__web_driver.set_window_size(width, height)
-
-        filename = ''
-
-        try:
-            filename = to_filename(self.link.url, export_path)
-        except LongFilenameException as lfe:
-            filename = filename[:(lfe.limit - len(constants.IMG_EXT) - 1)] + '.' + constants.IMG_EXT
-            print('WARN: Link was too long.',
-                  f'The filename of the screenshot has changed to: {filename}',
-                  file=self.__err_file)
-
-        path = os.path.join(export_path, filename)
-        if os.path.exists(path):
-            print(f'WARN: Screenshot already exists at: {path}', file=self.__err_file)
-            return None
-
-        return path
+    def get_html(self):
+        return self.__web_driver.page_source
 
     def take_screenshot(self, width=constants.WIDTH, height=constants.HEIGHT):
+        '''takes screenshot of current page and returns image as byte array'''
         self.__web_driver.set_window_size(width, height)
 
         # take a screenshot of the entire web page and store it in buffer
-        screenshot_bytes = BytesIO(self.__web_driver.get_screenshot_as_png())
+        screenshot_bytes = BytesIO(self.__web_driver.get_screenshot_as_png())  # TODO close
         image = Image.open(screenshot_bytes).convert("RGB")
 
         return ActionResult(True, image, 'Image is stored in a buffer')
 
-    def take_screenshot_and_store(self, export_path, width=constants.WIDTH, height=constants.HEIGHT):
-        path = self.__get_valid_img_path(export_path, width, height)
+    def scrape_page(self, export_path, scrape_option, width=constants.WIDTH, height=constants.HEIGHT):
+        successful = True
+        result = {'html': None, 'screenshot': None}
+        self.__web_driver.set_window_size(width, height)
 
-        if path is None:
-            return ActionResult(False, 'Failed to craft valid storing path for the screenshot')
+        if scrape_option in [ScrapeOption.ALL, ScrapeOption.SCREENSHOT]:
+            # take a screenshot of the entire web page and save it as an image file
+            path = url2file_path(
+                self.link.url,
+                os.path.join(export_path, 'screenshots'),
+                constants.IMG_EXT,
+                self.__err_file)
+            if path is None:
+                return ActionResult(False, 'Failed to craft valid storing path for the screenshot')
+            result['screenshot'] = path
+            successful = self.__web_driver.save_screenshot(path)
 
-        # take a screenshot of the entire web page and save it as an image file
-        successful = self.__web_driver.save_screenshot(path)
+        if scrape_option in [ScrapeOption.ALL, ScrapeOption.HTML]:
+            # save html as a file
+            path = url2file_path(
+                self.link.url,
+                os.path.join(export_path, 'html'),
+                'html',
+                self.__err_file)
+            if path is None:
+                return ActionResult(False, 'Failed to craft valid storing path for the html')
+            result['html'] = path
+            html = self.get_html()
+            with open(path, 'w') as f:
+                f.write(html)
 
-        return ActionResult(successful, path)
+        return ActionResult(successful, result)
 
-    def is_profile(self, classifier_name, width=constants.WIDTH, height=constants.HEIGHT):
+    def is_profile(self, classifier_name, width, height):
         result = self.take_screenshot(width, height)
 
         if not result.successful:

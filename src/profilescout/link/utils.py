@@ -165,14 +165,14 @@ def filter_out_long(page_links, err_file=sys.stderr):
     return not_too_long
 
 
-def to_filename(url, export_path):
+def to_filename(url, extension, export_path):
     filename = url
 
     # remove '/' at the end
     if filename[-1] == '/':
         filename = filename[:-1]
 
-    filename = filename.replace(f'__.{constants.IMG_EXT}', f'.{constants.IMG_EXT}')
+    filename = filename.replace(f'__.{extension}', f'.{extension}')
     filename = filename.replace('http://', '').replace('https://', '')
 
     for unsafe_part in constants.CHAR_REPLACEMENTS.keys():
@@ -181,9 +181,26 @@ def to_filename(url, export_path):
 
     # check if filename exceeds upper limit for number of characters
     FNAME_MAX_LEN = os.pathconf(export_path, 'PC_NAME_MAX')
-    if len(filename) + len(constants.IMG_EXT) + 1 > FNAME_MAX_LEN:
+    if len(filename) + len(extension) + 1 > FNAME_MAX_LEN:
         raise LongFilenameException(filename, FNAME_MAX_LEN)
     else:
-        filename += '.' + constants.IMG_EXT
+        filename += '.' + extension
 
     return filename
+
+
+def url2file_path(link, export_path, extension, err_file=sys.stderr):
+    filename = ''
+    try:
+        filename = to_filename(link, extension, export_path)
+    except LongFilenameException as lfe:
+        filename = filename[:(lfe.limit - len(extension) - 1)] + '.' + extension
+        print('WARN: Link was too long.',
+              f'The filename of has changed to: {filename}',
+              file=err_file)
+    path = os.path.join(export_path, filename)
+    if os.path.exists(path):
+        print(f'WARN: File already exists at: {path}', file=err_file)
+        return None
+
+    return path

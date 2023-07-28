@@ -24,6 +24,7 @@ class CrawlOptions:
     include_fragment: bool
     bump_relevant: bool
     use_buffer: bool
+    scraping: bool
 
 
 def _close_everything(web_driver, out_file, err_file, export_path, use_buffer):
@@ -97,11 +98,18 @@ def crawl_website(export_path, base_url, action, options):
                 err_file = StringIO()
             else:
                 out_file, err_file = _create_out_and_err_files(export_path)
-
             print(f'INFO: Logs for {base_url!r} are located at {export_path!r}')
+        else:
+            export_path = '.'
+
+        if options.scraping:
+            try:
+                os.mkdir(os.path.join(export_path, 'html'))
+                os.mkdir(os.path.join(export_path, 'screenshots'))
+            except Exception:
+                pass
 
         crawl_manager = CrawlManager(web_driver, base_url, out_file, err_file)
-
         crawl_manager.max_depth = options.max_depth
         crawl_manager.max_pages = options.max_pages
         crawl_manager.bump_relevant = options.bump_relevant
