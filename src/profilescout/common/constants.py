@@ -12,8 +12,8 @@ class ConstantsNamespace:
     # perform the action
     IMPL_WAIT_FOR_FULL_LOAD = 18
 
-    # Time to wait before next attempt to interact with web driver
-    # is made. Used for page visit and url extraction
+    # Time to wait before next attempt to interact with web driver is made. 
+    # Used for page visit
     RETRY_TIME = 60
 
     # Threshold for using buffer instead of printing everything to the file
@@ -28,7 +28,7 @@ class ConstantsNamespace:
         'docx', 'doc', 'pptx', 'ppt',
         'pdf', 'txt']
 
-    # List of words that are relevant for the profile
+    # List of words that are relevant for the profile.
     # Program will match them with the URL and possibly prioritize
     # if requested
     RELEVANT_WORDS = [
@@ -50,8 +50,8 @@ class ConstantsNamespace:
     # Threshold value for detecting positive class
     PREDICTION_THRESHOLD = 0.5
 
-    # Threshold for number of subpages of an URL that are classified as profile page,
-    # after which the URL is considered as the origin page for all profile pages
+    # The threshold determines the number of subpages of a URL that are categorized as profile pages. 
+    # Once this threshold is met, the URL is regarded as the parent page for all subsequent profile pages
     ORIGIN_PAGE_THRESHOLD = 3
 
     IMAGE_CLASSIFIERS = [
