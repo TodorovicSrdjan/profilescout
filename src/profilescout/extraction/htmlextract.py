@@ -15,11 +15,11 @@ TAGS_TO_EXCLUDE = ['b', 'i', 'strong', 'em', 'blockquote',
                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
 
 PATTERNS = {'unwanted_tag__has_placeholder': r'(?:<PLACEHOLDER.*?>)?(.*?)(?:</PLACEHOLDER>)?',
-            'md_link': r'\[(.*)\]\((.+)\)',
-            'email': r'^([a-z0-9_\.\+-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$',
+            'md_link': r'\[(.*?)\]\((.+?)\)',
+            'email': r'(?:[a-z0-9_\.\+-]+)@(?:[\da-z\.-]+)\.(?:[a-z\.]{2,6})',
             'different_line': r'^\+*([^+]*\w+.*)$',
             'label_field': r'^\w.*:$',
-            'label_field_with_value': r'^(\w.*):([\w\-]+)$',
+            'label_field_with_value': r'^(\w.*?):(.*\w.*)$',
             'repetetive_punct': f'[ {re.escape(string.punctuation)}]+',
             'repeating_whitespace': r'(?:(\ )+)|(?:(\t)+)|(?:(\n)+)|(?:(\r)+)|(?:(\f)+)',
             'number': r'((?:\(?(?:00|\+)(?:[1-4]\d\d|[1-9]\d?)\)?)?[\-\.\ \\\/]?'  # TODO fix for md links
@@ -71,7 +71,7 @@ def __extract_differences(base_page, other_page):
 
 
 def guess_name(parts, threshold=2, must_find=False):
-    '''Guess persons name based on frequency of words
+    '''Guess person's name based on frequency of words
 
     Parameter threshold represents number of occurences of 2 words
     after which they will be considered as first and last name.
@@ -118,29 +118,25 @@ def guess_name(parts, threshold=2, must_find=False):
     return f'{full_name[0]} {full_name[1]}'.title()
 
 
-def __get_num_context(phone_numbers, number_context):
-    # remove found numbers from 'number_context' since they come from the same input
-    for num in phone_numbers:
-        number_context = number_context.replace(num, 'PHONE_NUMBER')
+def __update_context(context, extracted_info, replacement):
+    # remove found info from context
+    if isinstance(extracted_info, str):
+        extracted_info = [extracted_info]
+    for info in extracted_info:
+        context = context.replace(info, replacement)
 
-    # replace any repeated whitespace with a single one
-    number_context = re.sub(PATTERNS['repeating_whitespace'], lambda m: m.group(0)[0], number_context)
-
-    # remove junk on both sides of the string
-    number_context = number_context.strip(string.whitespace + string.punctuation)
-
-    return number_context
+    return context
 
 
 def extract_international_phone_numbers(text, country_code):
-    number_info = {'numbers': [], 'context': ''}
+    number_info = {'numbers': [], 'context': text}
     phone_numbers = []
     for number in PhoneNumberMatcher(text, country_code):
         phone_numbers.append(number.raw_string)
     if len(phone_numbers) > 0:
-        number_info['context'] = __get_num_context(phone_numbers, text)
         if country_code is not None:
             for i, number in enumerate(phone_numbers):
+                number_info['context'] = __update_context(text, phone_numbers, 'PHONE_NUMBER')
                 number = parse(number, country_code)
                 phone_numbers[i] = format_number(number, PhoneNumberFormat.E164)
         number_info['numbers'] = phone_numbers
@@ -148,27 +144,21 @@ def extract_international_phone_numbers(text, country_code):
 
 
 def extract_national_phone_numbers(text):
-    number_info = {'numbers': [], 'context': ''}
-    no_cc_numbers = []
+    number_info = {'numbers': [], 'context': text}
+    phone_numbers = []
     match_number = re.findall(PATTERNS['number'], text)
     if match_number:
-        no_cc_numbers = [num_match[0] for num_match in match_number if num_match[0] != '']
+        phone_numbers = [num_match[0] for num_match in match_number if num_match[0] != '']
     # add numbers if country code is not present
-    if len(no_cc_numbers) > 0:
-        number_info['numbers'] = no_cc_numbers
-        number_info['context'] = __get_num_context(no_cc_numbers, text)
+    if len(phone_numbers) > 0:
+        number_info['numbers'] = phone_numbers
+        number_info['context'] = __update_context(text, phone_numbers, 'PHONE_NUMBER')
     return number_info
 
 
 def extract_phone_numbers(text, country_code):  # TODO fix for national nums, e.g. '011/1234-567'
-    number_info = {'numbers': [], 'context': ''}
-    # national_numbers = extract_national_phone_numbers(text)
-    # international_numbers = extract_international_phone_numbers(national_numbers['context'], country_code)
+    number_info = {'numbers': [], 'context': text}
     international_numbers = extract_international_phone_numbers(text, country_code)
-
-    # for national_number in national_numbers:
-    #     if national_number in international_numbers['numbers']:
-    #         number_info['numbers'].append(national_number)
     number_info['numbers'].extend(international_numbers['numbers'])
     number_info['context'] = international_numbers['context']
     return number_info
@@ -177,45 +167,60 @@ def extract_phone_numbers(text, country_code):  # TODO fix for national nums, e.
 def __parse_differences(differences, country_code=None):
     '''returns resume information which is extracted from differences between pages'''
     resume = dict()
+    resume['context'] = []
     resume['emails'] = []
     resume['links'] = []
     resume['other'] = []
-    resume['phone_number_info'] = {'numbers': [], 'context': ''}
+    resume['phone_numbers'] = []
     name_candidates = []
     for difference in differences:
-        match_email = re.search(PATTERNS['email'], difference)
-        match_md_link = re.search(PATTERNS['md_link'], difference)
+        match_email = re.findall(PATTERNS['email'], difference)
+        match_md_link = re.findall(PATTERNS['md_link'], difference)
         match_label_field = re.search(PATTERNS['label_field'], difference)
         match_label_field_with_value = re.search(PATTERNS['label_field_with_value'], difference)
 
+        found_something = False
+        context = difference
         number_info = extract_phone_numbers(difference, country_code)
         if len(number_info['numbers']) > 0:
-            resume['phone_number_info'] = number_info
-            continue
-
+            resume['phone_numbers'] = number_info['numbers']
+            context = number_info['context']
+            found_something = True
+        if match_md_link:
+            for md_link in match_md_link:
+                link = md_link[1].strip()
+                if 'mailto:' in link:
+                    if link not in resume['emails']:
+                        context = __update_context(context, f'[{md_link[0]}]({md_link[1]})', 'EMAIL')
+                        link = link.replace('mailto:', '').strip()
+                        resume['emails'].append(link)
+                        found_something = True
+                else:
+                    key = md_link[0].strip()
+                    if key == '':
+                        key = to_key(link)
+                    link = {key: link}
+                    resume['links'].append(link)
+                    context = __update_context(context, f'[{md_link[0]}]({md_link[1]})', 'LINK')
+                    found_something = True
+        # note that this has to go after md link match to avoid matching same thing multiple times
         if match_email:
-            email = match_email.group()
-            resume['emails'].append(email)
-            name_candidates.append(email)
-        elif match_md_link:
-            link = match_md_link.group(2).strip()
-            if 'mailto:' in link:
-                if link not in resume['emails']:
-                    link = link.replace('mailto:', '').strip()
-                    resume['emails'].append(link)
-            else:
-                key = match_md_link.group(1)
-                if key.strip() == '':
-                    key = to_key(link)
-                link = {key: link}
-                resume['links'].append(link)
-        elif match_label_field_with_value:
-            key = match_label_field_with_value.group(1).strip()
-            value = match_label_field_with_value.group(2).strip()
-            resume[key] = value
-        elif not match_label_field:
-            resume['other'].append(difference)
-            name_candidates.append(difference)
+            found_something = True
+            for email in match_email:
+                resume['emails'].append(email)
+                name_candidates.append(email)
+                context = __update_context(context, email, 'EMAIL')
+        if not found_something:
+            if match_label_field_with_value:
+                key = match_label_field_with_value.group(1)
+                value = match_label_field_with_value.group(2)
+                resume[key.strip()] = value.strip()
+                context = __update_context(context, key, 'FIELD_KEY')
+                context = __update_context(context, value, 'FIELD_VAL')
+            elif not match_label_field:
+                resume['other'].append(difference)
+                name_candidates.append(difference)
+        resume['context'] += [context]
     # try to guess person's name
     possible_name = guess_name(name_candidates, must_find=True)
     if possible_name is not None:
@@ -223,7 +228,9 @@ def __parse_differences(differences, country_code=None):
             resume['other'].remove(possible_name)
         if possible_name.upper() in resume['other']:
             resume['other'].remove(possible_name.upper())
-        resume['possible_name'] = possible_name
+        resume['name'] = possible_name
+        resume['emails'] = list(dict.fromkeys(resume['emails']))
+        resume['other'] = list(dict.fromkeys(resume['other']))
     return resume
 
 
@@ -247,8 +254,10 @@ def get_resumes(pages, country_code=None):
     for page in pages:
         soup = BeautifulSoup(page, 'html.parser')
         # remove javascipt and css code
-        for tag in soup.find_all("script"): soup.script.decompose()
-        for tag in soup.find_all("style"): soup.style.decompose()
+        for tag in soup.find_all("script"):
+            soup.script.decompose()
+        for tag in soup.find_all("style"):
+            soup.style.decompose()
         parsed_pages.append(soup)
     base_page = parsed_pages[0]
     other_pages = parsed_pages[1:]
