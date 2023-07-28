@@ -314,7 +314,7 @@ if __name__ == "__main__":
     except OSError as e:
         args.export_path = os.getcwd()
         parser.error(f'''
-              ERROR: Unable create directory at {args.export_path!r}
+            ERROR: Unable create directory at {args.export_path!r}
             (reason: {e.strerror if hasattr(e, "strerror") else "unknown"}).
             The current directory has been set as the export directory
             ''')

@@ -12,7 +12,7 @@ class ConstantsNamespace:
     # perform the action
     IMPL_WAIT_FOR_FULL_LOAD = 18
 
-    # Time to wait before next attempt to interact with web driver is made. 
+    # Time to wait before next attempt to interact with web driver is made.
     # Used for page visit
     RETRY_TIME = 60
 
@@ -50,7 +50,7 @@ class ConstantsNamespace:
     # Threshold value for detecting positive class
     PREDICTION_THRESHOLD = 0.5
 
-    # The threshold determines the number of subpages of a URL that are categorized as profile pages. 
+    # The threshold determines the number of subpages of a URL that are categorized as profile pages.
     # Once this threshold is met, the URL is regarded as the parent page for all subsequent profile pages
     ORIGIN_PAGE_THRESHOLD = 3
 
@@ -77,7 +77,7 @@ class ConstantsNamespace:
                         '!': 'EMARK',
                         ':': 'COL',
                         ';': 'SEMICOL',
-                        ',': 'COMMA',   
+                        ',': 'COMMA',
                         "'": 'APOST',
                         '"': 'QUOTE',
                         '`': 'BTICK',

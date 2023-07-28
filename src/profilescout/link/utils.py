@@ -197,7 +197,7 @@ def url2file_path(link, export_path, extension, err_file=sys.stderr):
         filename = to_filename(link, export_path, extension)
     except LongFilenameException as lfe:
         filename = lfe.args[0]
-        
+
         # cut off chars that exceed limit
         filename = filename[:lfe.limit]
 
@@ -206,7 +206,7 @@ def url2file_path(link, export_path, extension, err_file=sys.stderr):
         suffix = constants.FILENAME_CUT_SUFFIX
         suffix += str(random.randint(1000, 9999))
         overwrite_len = len(suffix) + len(ext)
-        filename = filename[:-overwrite_len] + suffix  + ext
+        filename = filename[:-overwrite_len] + suffix + ext
         print('WARN: Link was too long.',
               f'The filename of has changed to: {filename}',
               file=err_file)
