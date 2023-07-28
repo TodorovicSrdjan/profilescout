@@ -18,7 +18,7 @@ def main(url, urls_file_path, export_path,
          depth, max_pages, max_threads,
          include_fragment, bump_relevant, peserve_uri, use_buffer,
          action_type,
-         image_classifier):
+         resolution, image_classifier):
     user_inputs = []
     crawl_inputs = []
     constants = ConstantsNamespace()
@@ -65,9 +65,9 @@ def main(url, urls_file_path, export_path,
 
         args = [action_type]
         if action_type == WebpageActionType.SCREENSHOT_AND_STORE:
-            args.append(export_path_for_url)
+            args.extend([export_path_for_url, *resolution])
         elif action_type == WebpageActionType.FIND_ORIGIN:
-            args.append(image_classifier)
+            args.extend([image_classifier, *resolution])
 
         action = WebpageAction(*args)
 
@@ -243,6 +243,13 @@ if __name__ == "__main__":
         action='store_const',
         const=True,
         default=False)
+    parser.add_argument(
+        '-r', '--resolution',
+        help="Resolution of headless browser and output images. Format: WIDTHxHIGHT (default: %(default)s)",
+        required=False,
+        dest='resolution',
+        default=f'{constants.WIDTH}x{constants.HEIGHT}',
+        type=str)
 
     args = parser.parse_args()
 
@@ -251,6 +258,16 @@ if __name__ == "__main__":
                 or args.url.startswith('https://')):
             parser.error("url should start with 'http://' or 'https://'")
             sys.exit()
+
+    args.resolution = args.resolution.split('x')
+    if (len(args.resolution) < 2 
+    or not args.resolution[0].isdigit()
+    or args.resolution[0][0] == '0'
+    or not args.resolution[1].isdigit()
+    or args.resolution[1][0] == '0'
+    ):
+        parser.error("valid format for resolution: WIDTHxHEIGHT. Example: 2880x1620")
+        sys.exit()
 
     # create export dir if not present
     try:
@@ -298,6 +315,7 @@ if __name__ == "__main__":
             peserve_uri=args.peserve_uri,
             use_buffer=args.use_buffer,
             action_type=action_type,
+            resolution=args.resolution,
             image_classifier=args.image_classifier)
     except KeyboardInterrupt:
         print('\nINFO: Exited')

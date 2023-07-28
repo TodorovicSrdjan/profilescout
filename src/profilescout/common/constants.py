@@ -4,6 +4,10 @@ class ConstantsNamespace:
     # File extension of the screenshot
     IMG_EXT = 'png'
 
+    # Default image resolution
+    WIDTH = 2880
+    HEIGHT = 1620
+
     # Time for web driver to wait implicitly before attempting to
     # perform the action
     IMPL_WAIT_FOR_FULL_LOAD = 18

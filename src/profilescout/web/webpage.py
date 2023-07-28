@@ -77,7 +77,7 @@ class Webpage:
 
         return False
 
-    def __get_valid_img_path(self, export_path, width=2880, height=1620):
+    def __get_valid_img_path(self, export_path, width=constants.WIDTH, height=constants.HEIGHT):
         self.__web_driver.set_window_size(width, height)
 
         filename = ''
@@ -97,7 +97,7 @@ class Webpage:
 
         return path
 
-    def take_screenshot(self, width=2880, height=1620):
+    def take_screenshot(self, width=constants.WIDTH, height=constants.HEIGHT):
         self.__web_driver.set_window_size(width, height)
 
         # take a screenshot of the entire web page and store it in buffer
@@ -106,7 +106,7 @@ class Webpage:
 
         return ActionResult(True, image, 'Image is stored in a buffer')
 
-    def take_screenshot_and_store(self, export_path, width=2880, height=1620):
+    def take_screenshot_and_store(self, export_path, width=constants.WIDTH, height=constants.HEIGHT):
         path = self.__get_valid_img_path(export_path, width, height)
 
         if path is None:
@@ -117,7 +117,7 @@ class Webpage:
 
         return ActionResult(successful, path)
 
-    def is_profile(self, classifier_name, width=2880, height=1620):
+    def is_profile(self, classifier_name, width=constants.WIDTH, height=constants.HEIGHT):
         result = self.take_screenshot(width, height)
 
         if not result.successful:
