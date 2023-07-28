@@ -19,6 +19,7 @@ PATTERNS = {'unwanted_tag__has_placeholder': r'(?:<PLACEHOLDER.*?>)?(.*?)(?:</PL
             'email': r'^([a-z0-9_\.\+-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$',
             'different_line': r'^\+*([^+]*\w+.*)$',
             'label_field': r'^\w.*:$',
+            'label_field_with_value': r'^(\w.*):([\w\-]+)$',
             'repetetive_punct': f'[ {re.escape(string.punctuation)}]+',
             'repeating_whitespace': r'(?:(\ )+)|(?:(\t)+)|(?:(\n)+)|(?:(\r)+)|(?:(\f)+)',
             'number': r'((?:\(?(?:00|\+)(?:[1-4]\d\d|[1-9]\d?)\)?)?[\-\.\ \\\/]?'  # TODO fix for md links
@@ -185,6 +186,7 @@ def __parse_differences(differences, country_code=None):
         match_email = re.search(PATTERNS['email'], difference)
         match_md_link = re.search(PATTERNS['md_link'], difference)
         match_label_field = re.search(PATTERNS['label_field'], difference)
+        match_label_field_with_value = re.search(PATTERNS['label_field_with_value'], difference)
 
         number_info = extract_phone_numbers(difference, country_code)
         if len(number_info['numbers']) > 0:
@@ -207,6 +209,10 @@ def __parse_differences(differences, country_code=None):
                     key = to_key(link)
                 link = {key: link}
                 resume['links'].append(link)
+        elif match_label_field_with_value:
+            key = match_label_field_with_value.group(1).strip()
+            value = match_label_field_with_value.group(2).strip()
+            resume[key] = value
         elif not match_label_field:
             resume['other'].append(difference)
             name_candidates.append(difference)
