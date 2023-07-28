@@ -217,7 +217,6 @@ def __parse_differences(differences, country_code=None):
             resume['other'].remove(possible_name)
         if possible_name.upper() in resume['other']:
             resume['other'].remove(possible_name.upper())
-
         resume['possible_name'] = possible_name
     return resume
 
@@ -238,9 +237,15 @@ def get_resumes(pages, country_code=None):
     assert isinstance(pages, list), 'Parameter \'pages\' must be an list instance'
     assert len(pages) > 1, 'Number of pages has to be greater then 1'
 
-    pages = [BeautifulSoup(page, 'html.parser') for page in pages]
-    base_page = pages[0]
-    other_pages = pages[1:]
+    parsed_pages = []
+    for page in pages:
+        soup = BeautifulSoup(page, 'html.parser')
+        # remove javascipt and css code
+        for tag in soup.find_all("script"): soup.script.decompose()
+        for tag in soup.find_all("style"): soup.style.decompose()
+        parsed_pages.append(soup)
+    base_page = parsed_pages[0]
+    other_pages = parsed_pages[1:]
     resumes = dict()
 
     # if country_code is not set, try to infer it from html
