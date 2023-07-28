@@ -7,8 +7,7 @@ import difflib
 from bs4 import BeautifulSoup
 from html2text import HTML2Text
 from collections import defaultdict
-
-from phonenumbers import PhoneNumberMatcher, PhoneNumberFormat, format_number
+from phonenumbers import PhoneNumberMatcher, PhoneNumberFormat, format_number, parse
 
 
 TAGS_TO_EXCLUDE = ['b', 'i', 'strong', 'em', 'blockquote',
@@ -135,12 +134,14 @@ def extract_international_phone_numbers(text, country_code):
     number_info = {'numbers': [], 'context': ''}
     phone_numbers = []
     for number in PhoneNumberMatcher(text, country_code):
-        if country_code is not None:
-            number = format_number(number, PhoneNumberFormat.E164)
         phone_numbers.append(number.raw_string)
     if len(phone_numbers) > 0:
-        number_info['numbers'] = phone_numbers
         number_info['context'] = __get_num_context(phone_numbers, text)
+        if country_code is not None:
+            for i, number in enumerate(phone_numbers):
+                number = parse(number, country_code)
+                phone_numbers[i] = format_number(number, PhoneNumberFormat.E164)
+        number_info['numbers'] = phone_numbers
     return number_info
 
 
