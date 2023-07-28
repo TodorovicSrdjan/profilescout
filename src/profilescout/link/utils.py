@@ -1,6 +1,7 @@
 import re
 import os
 import sys
+import random
 import tldextract
 
 from dataclasses import dataclass
@@ -165,7 +166,7 @@ def filter_out_long(page_links, err_file=sys.stderr):
     return not_too_long
 
 
-def to_filename(url, extension, export_path):
+def to_filename(url, export_path, extension):
     filename = url
 
     # remove '/' at the end
@@ -180,9 +181,10 @@ def to_filename(url, extension, export_path):
             filename = filename.replace(unsafe_part, constants.CHAR_REPLACEMENTS[unsafe_part])
 
     # check if filename exceeds upper limit for number of characters
-    FNAME_MAX_LEN = os.pathconf(export_path, 'PC_NAME_MAX')
-    if len(filename) + len(extension) + 1 > FNAME_MAX_LEN:
-        raise LongFilenameException(filename, FNAME_MAX_LEN)
+    limit = os.pathconf(export_path, 'PC_NAME_MAX')
+    limit = min(limit, constants.FILENAME_MAX_LENGHT)
+    if len(filename) + len(extension) + 1 > limit:
+        raise LongFilenameException(filename, limit)
     else:
         filename += '.' + extension
 
@@ -192,9 +194,19 @@ def to_filename(url, extension, export_path):
 def url2file_path(link, export_path, extension, err_file=sys.stderr):
     filename = ''
     try:
-        filename = to_filename(link, extension, export_path)
+        filename = to_filename(link, export_path, extension)
     except LongFilenameException as lfe:
-        filename = filename[:(lfe.limit - len(extension) - 1)] + '.' + extension
+        filename = lfe.args[0]
+        
+        # cut off chars that exceed limit
+        filename = filename[:lfe.limit]
+
+        # replace the remaining string with suffix and extension
+        ext = '.' + extension
+        suffix = constants.FILENAME_CUT_SUFFIX
+        suffix += str(random.randint(1000, 9999))
+        overwrite_len = len(suffix) + len(ext)
+        filename = filename[:-overwrite_len] + suffix  + ext
         print('WARN: Link was too long.',
               f'The filename of has changed to: {filename}',
               file=err_file)

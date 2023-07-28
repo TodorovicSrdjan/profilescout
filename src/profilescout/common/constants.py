@@ -43,18 +43,6 @@ class ConstantsNamespace:
         'zaposlen', 'nastavnik', 'nastavnici', 'saradnici', 'profesor', 'osoblje',
         'запослен', 'наставник', 'наставници', 'сарадници', 'професор', 'особље']
 
-    # Mapping for unsafe chars that may appear in the filename
-    CHAR_REPLACEMENTS = {
-                        '#': 'ANCHOR',
-                        '?': 'QMARK',
-                        '&': 'AMPERSAND',
-                        ':': 'COLUMN',
-                        ';': 'SEMICOL',
-                        "'": 'APOSTROPHE',
-                        '[': 'SQBRACKET',
-                        ']': 'SQBRACKET',
-                        '/': '__'}
-
     # Suffix that is added to filename if file with default filename is present
     PRINT_SUFFIX_MIN = 100_000
     PRINT_SUFFIX_MAX = 999_999
@@ -69,3 +57,44 @@ class ConstantsNamespace:
     IMAGE_CLASSIFIERS = [
         'scooby',
         'batman']
+
+    # Max lenght of the filename. This is desired limit. If target filesystem does not support
+    # this lenght then it's limit will be used as maximum lenght
+    # Note: Kaggle has limit of 99 characters for filename
+    FILENAME_MAX_LENGHT = 99
+
+    # Suffix that will be appended after cut if filename is too long.
+    # Used to indicate that at that point where cropping happened.
+    # There is also another part of the suffix which is appended to avoid same filename conflicts
+    FILENAME_CUT_SUFFIX = '--CROP_'
+
+    # Mapping for unsafe chars that may appear in the filename
+    CHAR_REPLACEMENTS = {
+                        '#': 'ANCH',
+                        '?': 'QMARK',
+                        '&': 'AMP',
+                        '@': 'ATSGN',
+                        '!': 'EMARK',
+                        ':': 'COL',
+                        ';': 'SEMICOL',
+                        ',': 'COMMA',   
+                        "'": 'APOST',
+                        '"': 'QUOTE',
+                        '`': 'BTICK',
+                        '(': 'BR',
+                        ')': 'BR',
+                        '{': 'CRBR',
+                        '}': 'CRBR',
+                        '[': 'SQBR',
+                        ']': 'SQBR',
+                        '<': 'LTHEN',
+                        '>': 'GTHEN',
+                        '/': '__',
+                        '|': 'PIPE',
+                        '\\': 'BSLASH',
+                        '%': 'PERC',
+                        '+': 'PLUS',
+                        '*': 'STAR',
+                        '=': 'EQL',
+                        '^': 'CARET',
+                        '~': 'TILDA'}
