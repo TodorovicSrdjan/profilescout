@@ -245,12 +245,12 @@ def __parse_differences(differences, country_code=None):
         if 'profile' not in resume['links']:
             first, last = possible_name.lower().split()
             for img_link in resume['links']['images']:
-                if ('images' in resume['links']
-                    and (first.lower() in img_link.lower() or last.lower() in img_link.lower())
-                    ):
+                if 'images' in resume['links'] and (
+                    first.lower() in img_link.lower() or last.lower() in img_link.lower()
+                ):
                     resume['links']['profile'] = img_link
                     resume['links']['images'].remove(img_link)
-                    break  
+                    break
     # remove duplicates
     resume['emails'] = list(dict.fromkeys(resume['emails']))
     resume['other'] = list(dict.fromkeys(resume['other']))
