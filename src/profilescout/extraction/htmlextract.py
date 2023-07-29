@@ -11,10 +11,8 @@ from phonenumbers import PhoneNumberMatcher, PhoneNumberFormat, format_number, p
 
 from link.utils import to_key
 
-TAGS_TO_EXCLUDE = ['b', 'i', 'strong', 'em', 'blockquote',
-                   'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
 
-PATTERNS = {'unwanted_tag__has_placeholder': r'(?:<PLACEHOLDER.*?>)?(.*?)(?:</PLACEHOLDER>)?',
+PATTERNS = {'unwanted_tag__has_placeholder': r'(<\/?(?:b|i|strong|em|blockquote|h[1-6])\b[^>]*>)',
             'md_link': r'\[(.*?)\]\((.+?)\)',
             'email': r'(?:[a-z0-9_\.\+-]+)@(?:[\da-z\.-]+)\.(?:[a-z\.]{2,6})',
             'different_line': r'^\+*([^+]*\w+.*)$',
@@ -36,9 +34,8 @@ def __get_differences(different_lines):
             # get only the lines that differ from the lines on the base page
 
             line = match_diff_line.group(1)
-            for tag in TAGS_TO_EXCLUDE:
-                pattern = PATTERNS['unwanted_tag__has_placeholder'].replace('PLACEHOLDER', tag)
-                line = re.sub(pattern, r'\1', line, flags=re.DOTALL)
+            for tag in re.findall(PATTERNS['unwanted_tag__has_placeholder'], line, flags=re.DOTALL):
+                line = line.replace(tag, '')
 
             # this is not documented 'html2text' usage
             # 'html2text.html2text' does:
