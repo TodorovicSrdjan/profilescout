@@ -134,11 +134,13 @@ def extract_international_phone_numbers(text, country_code):
     for number in PhoneNumberMatcher(text, country_code):
         phone_numbers.append(number.raw_string)
     if len(phone_numbers) > 0:
-        if country_code is not None:
-            for i, number in enumerate(phone_numbers):
-                number_info['context'] = __update_context(text, phone_numbers, 'PHONE_NUMBER')
-                number = parse(number, country_code)
+        number_info['context'] = __update_context(text, phone_numbers, 'PHONE_NUMBER')
+        for i, number in enumerate(phone_numbers):
+            number = parse(number, country_code)
+            try:
                 phone_numbers[i] = format_number(number, PhoneNumberFormat.E164)
+            except Exception:
+                pass
         number_info['numbers'] = phone_numbers
     return number_info
 
