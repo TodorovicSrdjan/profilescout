@@ -26,7 +26,7 @@ PATTERNS = {'unwanted_tag__has_placeholder': r'(<\/?(?:b|i|strong|em|blockquote|
             }
 
 
-def __get_differences(different_lines):
+def _get_differences(different_lines):
     differences = []
     for line in different_lines:
         match_diff_line = re.search(PATTERNS['different_line'], line)
@@ -57,14 +57,14 @@ def __get_differences(different_lines):
     return differences
 
 
-def __extract_differences(base_page, other_page):
+def _extract_differences(base_page, other_page):
     # Compare the pages using difflib
     different_lines = difflib.unified_diff(
         str(base_page).splitlines(),
         str(other_page).splitlines(),
         lineterm='',
     )
-    return __get_differences(different_lines)
+    return _get_differences(different_lines)
 
 
 def guess_name(parts, threshold=2, must_find=False):
@@ -115,7 +115,7 @@ def guess_name(parts, threshold=2, must_find=False):
     return f'{full_name[0]} {full_name[1]}'.title()
 
 
-def __update_context(context, extracted_info, replacement):
+def _update_context(context, extracted_info, replacement):
     # remove found info from context
     if isinstance(extracted_info, str):
         extracted_info = [extracted_info]
@@ -131,7 +131,7 @@ def extract_international_phone_numbers(text, country_code):
     for number in PhoneNumberMatcher(text, country_code):
         phone_numbers.append(number.raw_string)
     if len(phone_numbers) > 0:
-        number_info['context'] = __update_context(text, phone_numbers, 'PHONE_NUMBER')
+        number_info['context'] = _update_context(text, phone_numbers, 'PHONE_NUMBER')
         for i, number in enumerate(phone_numbers):
             number = parse(number, country_code)
             try:
@@ -151,7 +151,7 @@ def extract_national_phone_numbers(text):
     # add numbers if country code is not present
     if len(phone_numbers) > 0:
         number_info['numbers'] = phone_numbers
-        number_info['context'] = __update_context(text, phone_numbers, 'PHONE_NUMBER')
+        number_info['context'] = _update_context(text, phone_numbers, 'PHONE_NUMBER')
     return number_info
 
 
@@ -163,7 +163,7 @@ def extract_phone_numbers(text, country_code):  # TODO fix for national nums, e.
     return number_info
 
 
-def __parse_differences(differences, country_code=None):
+def _parse_differences(differences, country_code=None):
     '''returns resume information which is extracted from differences between pages'''
     resume = dict()
     resume['context'] = []
@@ -190,7 +190,7 @@ def __parse_differences(differences, country_code=None):
                 link = md_link[1].strip()
                 if 'mailto:' in link:
                     if link not in resume['emails']:
-                        context = __update_context(context, f'[{md_link[0]}]({md_link[1]})', 'EMAIL')
+                        context = _update_context(context, f'[{md_link[0]}]({md_link[1]})', 'EMAIL')
                         link = link.replace('mailto:', '').strip()
                         resume['emails'].append(link)
                         found_something = True
@@ -213,7 +213,7 @@ def __parse_differences(differences, country_code=None):
                         resume['links'][key] = [link, resume['links'][key]]
                     else:
                         resume['links'][key].append(link)
-                    context = __update_context(context, f'[{md_link[0]}]({md_link[1]})', 'LINK')
+                    context = _update_context(context, f'[{md_link[0]}]({md_link[1]})', 'LINK')
                     found_something = True
         # note that this has to go after md link match to avoid matching same thing multiple times
         if match_email:
@@ -221,14 +221,14 @@ def __parse_differences(differences, country_code=None):
             for email in match_email:
                 resume['emails'].append(email)
                 name_candidates.append(email)
-                context = __update_context(context, email, 'EMAIL')
+                context = _update_context(context, email, 'EMAIL')
         if not found_something:
             if match_label_field_with_value:
                 key = match_label_field_with_value.group(1)
                 value = match_label_field_with_value.group(2)
                 resume[key.strip()] = value.strip()
-                context = __update_context(context, key, 'FIELD_KEY')
-                context = __update_context(context, value, 'FIELD_VAL')
+                context = _update_context(context, key, 'FIELD_KEY')
+                context = _update_context(context, value, 'FIELD_VAL')
             elif not match_label_field:
                 resume['other'].append(difference)
                 name_candidates.append(difference)
@@ -265,8 +265,8 @@ def get_resume_info(base_page, page, country_code=None):
 
     Returns dictionary with identified and not identified field values
     '''
-    differences = __extract_differences(base_page, page)
-    return __parse_differences(differences, country_code)
+    differences = _extract_differences(base_page, page)
+    return _parse_differences(differences, country_code)
 
 
 def get_resumes(pages, country_code=None):
