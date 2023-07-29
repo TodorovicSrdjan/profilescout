@@ -9,7 +9,7 @@ from html2text import HTML2Text
 from collections import defaultdict
 from phonenumbers import PhoneNumberMatcher, PhoneNumberFormat, format_number, parse
 
-from link.utils import to_key
+from link.utils import to_key, is_url
 
 
 PATTERNS = {'unwanted_tag__has_placeholder': r'(<\/?(?:b|i|strong|em|blockquote|h[1-6])\b[^>]*>)',
@@ -168,7 +168,7 @@ def __parse_differences(differences, country_code=None):
     resume = dict()
     resume['context'] = []
     resume['emails'] = []
-    resume['links'] = []
+    resume['links'] = dict()
     resume['other'] = []
     resume['phone_numbers'] = []
     name_candidates = []
@@ -195,11 +195,24 @@ def __parse_differences(differences, country_code=None):
                         resume['emails'].append(link)
                         found_something = True
                 else:
+                    # find out key
                     key = md_link[0].strip()
-                    if key == '':
+                    if is_url(key):
                         key = to_key(link)
-                    link = {key: link}
-                    resume['links'].append(link)
+                    # check if is relative link
+                    elif re.search(r'^[^(www)|(http)].+?\..+(/.+)*$', link.lower()):
+                        key = 'this'
+                        if re.search(r'^(images?/)?.*?\.(jpg|jpeg|png|svg|webp|gif|bmp|ppm)$', link.lower()):
+                            key = 'images'
+                    if key == '':
+                        key = 'profile'
+                    # add new link
+                    if key not in resume['links']:
+                        resume['links'][key] = link
+                    elif isinstance(resume['links'][key], str):
+                        resume['links'][key] = [link, resume['links'][key]]
+                    else:
+                        resume['links'][key].append(link)
                     context = __update_context(context, f'[{md_link[0]}]({md_link[1]})', 'LINK')
                     found_something = True
         # note that this has to go after md link match to avoid matching same thing multiple times
@@ -230,6 +243,9 @@ def __parse_differences(differences, country_code=None):
         resume['name'] = possible_name
         resume['emails'] = list(dict.fromkeys(resume['emails']))
         resume['other'] = list(dict.fromkeys(resume['other']))
+    # remove duplicates
+    resume['emails'] = list(dict.fromkeys(resume['emails']))
+    resume['other'] = list(dict.fromkeys(resume['other']))
     return resume
 
 

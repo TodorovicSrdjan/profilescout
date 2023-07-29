@@ -20,6 +20,11 @@ class PageLink:
     parent_url: str = None
 
 
+def is_url(s):
+    extracted = tldextract.extract(s)
+    return bool(extracted.domain and extracted.suffix)
+
+
 def is_valid(url, base_url):
     if not isinstance(url, str):
         return False
@@ -83,7 +88,9 @@ def to_key(url):
     result = tldextract.extract(url)
     if result.subdomain in ['', 'www']:
         return result.domain
-    return f'{result.domain}-{result.subdomain}'
+    if 'www' in result.subdomain:
+        subdomain = result.subdomain.replace('www.', '')
+    return f'{result.domain}-{subdomain}'
 
 
 def to_fqdn(url):
