@@ -108,10 +108,10 @@ def guess_name(parts, threshold=2, must_find=False):
         if og_first_name[0].isupper() and og_last_name[0].isupper():
             if count >= threshold:
                 return ' '.join(word_pair).title()
-    if not must_find or len(sorted_word_pairs) > 0:
+    if not must_find or len(sorted_word_pairs) == 0:
         return None
     # choose most occuring pair as person's name
-    full_name = sorted_word_pairs[0]
+    full_name = sorted_word_pairs[0][0]
     return f'{full_name[0]} {full_name[1]}'.title()
 
 
