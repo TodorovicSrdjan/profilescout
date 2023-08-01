@@ -244,13 +244,17 @@ def _parse_differences(differences, country_code=None):
         # check if profile image link is missing
         if 'profile' not in resume['links']:
             first, last = possible_name.lower().split()
-            for img_link in resume['links']['images']:
-                if 'images' in resume['links'] and (
-                    first.lower() in img_link.lower() or last.lower() in img_link.lower()
-                ):
-                    resume['links']['profile'] = img_link
-                    resume['links']['images'].remove(img_link)
-                    break
+            if 'images' in resume['links']:
+                for img_link in resume['links']['images']:
+                    if 'images' in resume['links'] and (
+                        first.lower() in img_link.lower() or last.lower() in img_link.lower()
+                    ):
+                        resume['links']['profile'] = img_link
+                        if isinstance(resume['links']['images'], str):
+                            del resume['links']['images']
+                        else:
+                            resume['links']['images'].remove(img_link)
+                        break
     # remove duplicates
     resume['emails'] = list(dict.fromkeys(resume['emails']))
     resume['other'] = list(dict.fromkeys(resume['other']))
