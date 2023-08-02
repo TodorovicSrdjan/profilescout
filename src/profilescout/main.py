@@ -22,6 +22,7 @@ def is_same_url(base_url, url):
         return True
     return False
 
+
 def scrape_profiles_transition(plan, options, curr_page, prev_result):
     plan._CrawlPlan__skip_next_page_action = True
     plan._CrawlPlan__clear_history = True
@@ -29,7 +30,7 @@ def scrape_profiles_transition(plan, options, curr_page, prev_result):
     # skip queuing of child pages
     plan._CrawlPlan__skip_sublinks_after = 1
     # origin is previous page on depth-1 and we want to use current depth as a max depth
-    plan._CrawlPlan__init_page = PageLink(prev_result,curr_page.link.depth-1)
+    plan._CrawlPlan__init_page = PageLink(prev_result, curr_page.link.depth-1)
     plan.options.max_depth = curr_page.link.depth
 
 
