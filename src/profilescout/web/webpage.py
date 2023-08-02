@@ -140,10 +140,13 @@ class Webpage:
 
         return ActionResult(True, profile_detected, 'Inference was successfully performed')
 
-    def extract_links(self, base_url, include_fragment=False):
+    def extract_links(self, base_url, include_fragment=False, from_structure=False, previous_links=[]):
         page_links = []
         urls = []
-        a_tags = self.__web_driver.find_elements(By.XPATH, '//a[@href]')
+        xpath = '//a[@href]'
+        if from_structure:
+            xpath = '//table//a[@href] | //ul//a[@href] | //ol//a[@href]'
+        a_tags = self.__web_driver.find_elements(By.XPATH, xpath)
         for a_tag in a_tags:
             href = ''
             try:
@@ -169,6 +172,9 @@ class Webpage:
 
                 if href not in urls and is_valid(href, base_url):
                     urls.append(href)
-                    page_links += [PageLink(href, self.link.depth+1, self.link.url)]
+                    page_link = PageLink(href, self.link.depth+1, self.link.url)
+                    if from_structure and page_link.url in previous_links:
+                        continue
+                    page_links += [page_link]
 
         return page_links

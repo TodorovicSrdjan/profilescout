@@ -151,10 +151,9 @@ def crawl_website(export_path, base_url, plan):
                     break
 
             if crawl_status != CrawlStatus.SKIP_SUBLINKS or not plan.skip_sublinks():
-                plan.queued_sublinks()
                 filters = plan.filters
-                crawl_manager.queue_sublinks(plan.options.include_fragment, filters)
-
+                crawl_manager.queue_sublinks(plan.options.include_fragment, filters, plan.links_from_structure)
+                plan.queued_sublinks()
             out_file.flush()
             err_file.flush()
             time.sleep(plan.options.crawl_sleep)
@@ -183,6 +182,7 @@ class CrawlPlan:
         self.__skip_sublinks_after = None
         self.__current_action = actions[0]
 
+        self.links_from_structure = False
         self.options = options
         self.filters = []
 
@@ -227,6 +227,8 @@ class CrawlPlan:
             self.__skip_sublinks_after -= 1
             if self.__skip_sublinks_after < 0:  # just in case
                 self.__skip_sublinks_after = None
+        else:
+            self.links_from_structure = False
 
         return self.__skip_sublinks_after
 

@@ -230,3 +230,16 @@ def url2file_path(link, export_path, extension, err_file=sys.stderr):
         return None
 
     return path
+
+
+def replace_param_vals(url, replacement='####'):
+    return re.sub(r'(?<=[?&])(.*?)=(.*?)(?=&|$)', r'\1='+replacement, url)
+
+
+def most_common_format(urls, placeholder='####'):
+    urls = [replace_param_vals(url, placeholder) for url in urls]
+    frequency_dict = {}
+    for string in urls:
+        frequency_dict[string] = frequency_dict.get(string, 0) + 1
+    url_freqs_desc = sorted(urls, key=lambda x: (-frequency_dict[x], x))
+    return url_freqs_desc[0]

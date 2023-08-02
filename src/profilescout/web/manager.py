@@ -4,7 +4,7 @@ from selenium.common.exceptions import WebDriverException
 from web.webpage import Webpage, WebpageActionType
 from common.constants import ConstantsNamespace
 from common.exceptions import parse_web_driver_exception
-from link.utils import PageLink, remove_duplicates, prioritize_relevant, to_abs_path
+from link.utils import PageLink, remove_duplicates, prioritize_relevant, to_abs_path, most_common_format
 from link.utils import filter_out_invalid, filter_out_visited, filter_out_present_links, filter_out_long
 
 
@@ -119,12 +119,16 @@ class CrawlManager:
             'max_pages': self.__max_pages,
             'bump_relevant': self.__bump_relevant}
 
-    def queue_sublinks(self, include_fragment=False, plan_filters=[]):
+    def queue_sublinks(self, include_fragment=False, plan_filters=[], links_from_structure=False):
         # check if the maximum depth (number of hops) has been reached
         if self.curr_page.link.depth == self.__max_depth:
             # ignore links on the current page and continue with visiting links that left to be visited
             return None
-        hops = self.curr_page.extract_links(self.__base_url, include_fragment)
+        # extract URLs
+        if not links_from_structure:
+            self.__previous_links = []
+        hops = self.curr_page.extract_links(self.__base_url, include_fragment, links_from_structure,  self.__previous_links)
+        self.__previous_links = [hop.url for hop in hops]
 
         # transform extracted URLs, as some of them may be invalid or irrelevant
         hops_with_abs_path = to_abs_path(hops, self.__base_url, self.curr_page.link.url)
@@ -155,14 +159,15 @@ class CrawlManager:
                 if parent_url is not None:
                     origin = parent_url
                 if origin not in self.__origin_candidates:
-                    self.__origin_candidates[origin] = 1
+                    self.__origin_candidates[origin] = []
                 else:
-                    self.__origin_candidates[origin] += 1
+                    self.__origin_candidates[origin] += [self.curr_page.link.url]
 
                 # check if the profile page origin is found
-                children_count = self.__origin_candidates[origin]
+                children = self.__origin_candidates[origin]
+                children_count = len(children)
                 if children_count == constants.ORIGIN_PAGE_THRESHOLD:
-                    result.val = origin
+                    result.val = {'origin': origin, 'most_common_format': most_common_format(children)}
                     result.msg = f'Found profile page origin at {origin!r}'
                     return CrawlStatus.NEXT_STAGE
         return CrawlStatus.CONTINUE
