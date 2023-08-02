@@ -98,7 +98,6 @@ class CrawlManager:
             err_msg, reason = parse_web_driver_exception(e, self.curr_page.link.url)
             print(f'ERROR: {err_msg} (reason: {reason})', file=self.err_file)
             print(f'WARN: {reason} {self.curr_page.link.url}', file=self.out_file)
-
             # skip this url
             return None
 
@@ -108,7 +107,6 @@ class CrawlManager:
         # if content-type is not 'text/*' then ignore it
         if not is_text_file:
             return None
-
         return self.curr_page.link
 
     def increase_count(self):
@@ -126,7 +124,6 @@ class CrawlManager:
         if self.curr_page.link.depth == self.__max_depth:
             # ignore links on the current page and continue with visiting links that left to be visited
             return None
-
         hops = self.curr_page.extract_links(self.__base_url, include_fragment)
 
         # transform extracted URLs, as some of them may be invalid or irrelevant

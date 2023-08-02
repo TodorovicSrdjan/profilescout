@@ -120,16 +120,15 @@ def crawl_website(export_path, base_url, plan):
         # iterates until there aren't any links to be visited
         # if max depth is reached link extraction is ignored and all links up to that depth are visited and saved
         while True:
+            # visit page
             if not crawl_manager.has_next():
                 print(f'INFO: All links at a depth of {plan.options.max_depth} have been visited.',
                       'Stopping the crawling...',
                       file=out_file)
                 break
-
             curr_page_link = crawl_manager.visit_next()
             if curr_page_link is None:
                 continue
-
             print(f'{curr_page_link.depth} {curr_page_link.url}', file=out_file, flush=True)
 
             # perform action on visited page
@@ -158,7 +157,6 @@ def crawl_website(export_path, base_url, plan):
 
             out_file.flush()
             err_file.flush()
-
             time.sleep(plan.options.crawl_sleep)
     except RemoteDisconnected as rde:
         print(f'INFO: Interrupted. Exiting... ({rde!r})', file=err_file)
@@ -168,7 +166,6 @@ def crawl_website(export_path, base_url, plan):
     finally:
         _close_everything(web_driver, out_file, err_file, export_path, plan.options.use_buffer)
         print(f'INFO: Crawling of {base_url!r} is complete')
-
     return result
 
 
@@ -201,6 +198,7 @@ class CrawlPlan:
 
         if self.__clear_history:
             crawl_manager.clear_history(self.__init_page)
+
         # update crawl options
         max_depth = self.options.max_depth
         max_pages = self.options.max_pages
@@ -214,7 +212,6 @@ class CrawlPlan:
     def next_action(self):
         if len(self.__actions) == self.__current_action_index:
             return False
-
         self.__current_action_index += 1
         self.__current_action = self.__actions[self.__current_action_index]
         return True
