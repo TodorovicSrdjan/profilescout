@@ -5,7 +5,7 @@ import textwrap
 from concurrent.futures import ThreadPoolExecutor, wait
 
 from common.constants import ConstantsNamespace
-from link.utils import to_fqdn, to_base_url
+from link.utils import PageLink, to_fqdn, to_base_url
 from web.webpage import WebpageActionType, WebpageAction, ScrapeOption
 from web.crawl import CrawlOptions, CrawlPlan, crawl_website
 from classification.classifier import CLASSIFIERS_DIR
@@ -15,11 +15,22 @@ from extraction.htmlextract import get_resumes_from_dir
 constants = ConstantsNamespace
 
 
-def scrape_profiles_transition(plan, prev_result):
-    plan.__clear_history = True
-    plan.__init_page = prev_result
-    plan.__skip_next_page_action = True
-    plan.options.max_depth = 1  # visit just sublinks
+def is_same_url(base_url, url):
+    idx_base = max(base_url.rfind("/"), base_url.find("?"), base_url.find("="))
+    idx_url = max(url.rfind("/"), url.find("?"), url.find("="))
+    if base_url[:idx_base] == url[:idx_url]:
+        return True
+    return False
+
+def scrape_profiles_transition(plan, options, curr_page, prev_result):
+    plan._CrawlPlan__skip_next_page_action = True
+    plan._CrawlPlan__clear_history = True
+    plan.filters = [lambda page_link:  is_same_url(curr_page.link.url, page_link.url)]
+    # skip queuing of child pages
+    plan._CrawlPlan__skip_sublinks_after = 1
+    # origin is previous page on depth-1 and we want to use current depth as a max depth
+    plan._CrawlPlan__init_page = PageLink(prev_result,curr_page.link.depth-1)
+    plan.options.max_depth = curr_page.link.depth
 
 
 def main(url, urls_file_path, export_path, directory,

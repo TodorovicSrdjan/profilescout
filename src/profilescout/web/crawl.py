@@ -133,23 +133,28 @@ def crawl_website(export_path, base_url, plan):
             print(f'{curr_page_link.depth} {curr_page_link.url}', file=out_file, flush=True)
 
             # perform action on visited page
+            crawl_status = CrawlStatus.CONTINUE
             if plan.action_allowed():
-                action_result = action_manager.perform_action(crawl_manager.curr_page, plan.get_curr_action())
+                action = plan.get_curr_action()
+                action_result = action_manager.perform_action(crawl_manager.curr_page, action)
+                crawl_status = crawl_manager.process_action_result(action_result, action.action_type)
+                if action_result.successful:  # TODO refactor with new crawl option
+                    crawl_manager.increase_count()
+                    if crawl_manager.is_page_max_reached():
+                        break
 
-            if action_result.crawl_status == CrawlStatus.NEXT_STAGE:
+            # check if current stage is over
+            if crawl_status == CrawlStatus.NEXT_STAGE:
                 result = action_result.val
                 print(f'INFO: {action_result.msg}', file=out_file)
                 has_next = plan.next_stage(crawl_manager, result)
                 if not has_next:
                     break
 
-            if action_result.successful:
-                crawl_manager.increase_count()
-                if crawl_manager.is_page_max_reached():
-                    break
-
-            if action_result.crawl_status != CrawlStatus.SKIP_SUBLINKS:
-                crawl_manager.queue_sublinks(plan.options.include_fragment)
+            if crawl_status != CrawlStatus.SKIP_SUBLINKS or plan.skip_sublinks():
+                plan.queued_sublinks()
+                filters = plan.filters
+                crawl_manager.queue_sublinks(plan.options.include_fragment, filters)
 
             out_file.flush()
             err_file.flush()
@@ -178,9 +183,11 @@ class CrawlPlan:
         self.__init_page = None
         self.__clear_history = False
         self.__skip_next_page_action = False
+        self.__skip_sublinks_after = None
         self.__current_action = actions[0]
 
         self.options = options
+        self.filters = []
 
     def get_curr_action(self):
         return self.__current_action
@@ -190,7 +197,7 @@ class CrawlPlan:
             return False
 
         update = self.__stages[self.__current_stage_index]
-        update(self, prev_stage_result)
+        update(self, crawl_manager.get_options(), crawl_manager.curr_page, prev_stage_result)
 
         if self.__clear_history:
             crawl_manager.clear_history(self.__init_page)
@@ -217,3 +224,16 @@ class CrawlPlan:
             self.__skip_next_page_action = False
             return False
         return True
+
+    def queued_sublinks(self):
+        if self.__skip_sublinks_after is not None:
+            self.__skip_sublinks_after -= 1
+            if self.__skip_sublinks_after < 0:  # just in case
+                self.__skip_sublinks_after = None
+
+        return self.__skip_sublinks_after
+
+    def skip_sublinks(self):
+        if self.__skip_sublinks_after is not None or self.__skip_sublinks_after == 0:
+            return True
+        return False

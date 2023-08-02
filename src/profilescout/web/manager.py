@@ -18,35 +18,6 @@ class ActionManager:
         self.__out_file = out_file
         self.__err_file = err_file
 
-    def __process_result(self, result, page, action_type):
-        if action_type == WebpageActionType.FIND_ORIGIN:
-            profile_detected = result.val
-            if result.successful and profile_detected:
-                if not hasattr(self, '_ActionManager__origin_candidates'):
-                    self.__origin_candidates = {}
-
-                # assume that this is initial page
-                origin = page.link.url
-
-                parent_url = page.link.parent_url
-                if parent_url is not None:
-                    origin = parent_url
-
-                if origin not in self.__origin_candidates:
-                    self.__origin_candidates[origin] = 1
-                else:
-                    self.__origin_candidates[origin] += 1
-
-                # check if the profile page origin is found
-                children_count = self.__origin_candidates[origin]
-
-                if children_count == constants.ORIGIN_PAGE_THRESHOLD:
-                    result.val = origin
-                    result.msg = f'Found profile page origin at {origin!r}'
-                    return CrawlStatus.NEXT_STAGE
-
-        return CrawlStatus.CONTINUE
-
     def __perform(self, page, action):
         result = None
         if action.action_type != WebpageActionType.UNKNOWN and hasattr(action.func, "__name__"):
@@ -64,9 +35,6 @@ class ActionManager:
             else:
                 action_name = action.func.__name__
             print(f'ERROR: Failed to perform action {action_name!r} for: {page.link.url}', file=self.__err_file)
-
-        crawl_status = self.__process_result(result, page, action.action_type)
-        result.crawl_status = crawl_status
 
         return result
 
@@ -147,8 +115,13 @@ class CrawlManager:
         self.__scraped_count += 1
         return self.__scraped_count
 
-    def queue_sublinks(self, include_fragment=False):
+    def get_options(self):
+        return {
+            'max_depth': self.__max_depth,
+            'max_pages': self.__max_pages,
+            'bump_relevant': self.__bump_relevant}
 
+    def queue_sublinks(self, include_fragment=False, plan_filters=[]):
         # check if the maximum depth (number of hops) has been reached
         if self.curr_page.link.depth == self.__max_depth:
             # ignore links on the current page and continue with visiting links that left to be visited
@@ -163,10 +136,36 @@ class CrawlManager:
         new_links = filter_out_present_links(valid_not_visited, self.__links_to_visit)
         new_links = filter_out_long(new_links, self.err_file)
         new_links = remove_duplicates(new_links)
-
+        if plan_filters != []:
+            for plan_filter in plan_filters:
+                new_links = filter(plan_filter, new_links)
         self.__links_to_visit.extend(new_links)
 
         if self.__bump_relevant:
             self.__links_to_visit = prioritize_relevant(self.__links_to_visit)
 
         return self.__links_to_visit
+
+    def process_action_result(self, result, action_type):
+        if action_type == WebpageActionType.FIND_ORIGIN:
+            profile_detected = result.val
+            if result.successful and profile_detected:
+                if not hasattr(self, '_CrawlManager__origin_candidates'):
+                    self.__origin_candidates = {}
+                # assume that this is initial page
+                origin = self.curr_page.link.url
+                parent_url = self.curr_page.link.parent_url
+                if parent_url is not None:
+                    origin = parent_url
+                if origin not in self.__origin_candidates:
+                    self.__origin_candidates[origin] = 1
+                else:
+                    self.__origin_candidates[origin] += 1
+
+                # check if the profile page origin is found
+                children_count = self.__origin_candidates[origin]
+                if children_count == constants.ORIGIN_PAGE_THRESHOLD:
+                    result.val = origin
+                    result.msg = f'Found profile page origin at {origin!r}'
+                    return CrawlStatus.NEXT_STAGE
+        return CrawlStatus.CONTINUE
