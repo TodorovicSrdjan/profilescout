@@ -150,7 +150,7 @@ def crawl_website(export_path, base_url, plan):
                 if not has_next:
                     break
 
-            if crawl_status != CrawlStatus.SKIP_SUBLINKS or plan.skip_sublinks():
+            if crawl_status != CrawlStatus.SKIP_SUBLINKS or not plan.skip_sublinks():
                 plan.queued_sublinks()
                 filters = plan.filters
                 crawl_manager.queue_sublinks(plan.options.include_fragment, filters)
