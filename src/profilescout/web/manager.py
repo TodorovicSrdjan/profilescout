@@ -167,7 +167,7 @@ class CrawlManager:
                 children = self.__origin_candidates[origin]
                 children_count = len(children)
                 if children_count == constants.ORIGIN_PAGE_THRESHOLD:
-                    result.val = {'origin': origin, 'most_common_format': most_common_format(children)}
+                    result.val = {'origin': origin, 'most_common_format': most_common_format(children)}  # TODO add placeholder
                     result.msg = f'Found profile page origin at {origin!r}'
                     return CrawlStatus.NEXT_STAGE
         return CrawlStatus.CONTINUE

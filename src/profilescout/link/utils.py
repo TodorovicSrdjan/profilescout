@@ -3,6 +3,7 @@ import os
 import sys
 import random
 import tldextract
+from urllib.parse import urlparse
 
 from dataclasses import dataclass
 
@@ -237,9 +238,33 @@ def replace_param_vals(url, replacement='####'):
 
 
 def most_common_format(urls, placeholder='####'):
-    urls = [replace_param_vals(url, placeholder) for url in urls]
-    frequency_dict = {}
-    for string in urls:
-        frequency_dict[string] = frequency_dict.get(string, 0) + 1
-    url_freqs_desc = sorted(urls, key=lambda x: (-frequency_dict[x], x))
-    return url_freqs_desc[0]
+    parsed_url = urlparse(urls[0])
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}/"
+    url_paths = [urlparse(replace_param_vals(url, placeholder)).path[1:] for url in urls]
+    fmts = dict()
+    for url1 in url_paths:
+        url1 = url1.split('/')
+        for url2 in url_paths:
+            url2 = url2.split('/')
+            fmt_parts = []
+            lmin = min(len(url1), len(url2))
+            for i in range(lmin):
+                fmt_parts += [url1[i]] if url1[i] == url2[i] else [placeholder]
+            lmax = max(len(url1), len(url2))
+            fmt_parts += [placeholder] * (lmax - lmin)
+            if placeholder in fmt_parts:
+                fmt = '/'.join(fmt_parts)
+                fmts[fmt] = fmts.get(fmt, 0) + 1
+    if len(fmts) == 0:
+        return None
+    # sort formats by count of '#' in format and negative value of frequency
+    # note: negative value is used in order to achive desc ordering by frequency
+    fmt_freqs = sorted(fmts.items(), key=lambda x: (x[0].count(placeholder), -x[1]))
+    common_fmt = fmt_freqs[0][0]
+    return base_url + common_fmt
+
+
+def match_profile_fmt(url, fmt, placeholder):
+    assert placeholder in fmt, f'expected a format containing the placeholder {placeholder!r}, but recieved: {fmt!r}'
+    fmt_pattern = re.sub(placeholder, r'.+?', fmt)
+    return re.search(fmt_pattern, url)

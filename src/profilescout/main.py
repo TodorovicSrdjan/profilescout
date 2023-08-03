@@ -5,7 +5,7 @@ import textwrap
 from concurrent.futures import ThreadPoolExecutor, wait
 
 from common.constants import ConstantsNamespace
-from link.utils import PageLink, to_fqdn, to_base_url, replace_param_vals
+from link.utils import PageLink, to_fqdn, to_base_url, replace_param_vals, match_profile_fmt
 from web.webpage import WebpageActionType, WebpageAction, ScrapeOption
 from web.crawl import CrawlOptions, CrawlPlan, crawl_website
 from classification.classifier import CLASSIFIERS_DIR
@@ -15,9 +15,10 @@ from extraction.htmlextract import get_resumes_from_dir
 constants = ConstantsNamespace
 
 
-def is_valid_sublink(url, fmt):
-    url_fmt = replace_param_vals(url, '####')
-    if url_fmt == fmt:
+def is_valid_sublink(url, fmt, placeholder):
+    if fmt is None:
+        return True
+    if match_profile_fmt(url, fmt, placeholder):
         return True
     return False
 
@@ -26,7 +27,7 @@ def scrape_profiles_transition(plan, options, curr_page, prev_result):
     plan._CrawlPlan__skip_next_page_action = True
     plan._CrawlPlan__clear_history = True
     plan.links_from_structure = True
-    plan.filters = [lambda page_link: is_valid_sublink(page_link.url, prev_result['most_common_format'])]
+    plan.filters = [lambda page_link: is_valid_sublink(page_link.url, prev_result['most_common_format'], '####')]
     # skip queuing of child pages
     plan._CrawlPlan__skip_sublinks_after = 1
     # origin is previous page on depth-1 and we want to use current depth as a max depth
