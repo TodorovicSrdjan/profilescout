@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "profilescout"
 dynamic = ["version"]
-description = 'Profile Page Kit is a kit that uses crawling and machine learning to identify profile pages on any website, simplifying the process of extracting user profiles, gathering information, and performing targeted actions.'
+description = 'Profile Scout is a kit that uses crawling and machine learning to identify profile pages on any website, simplifying the process of extracting user profiles, gathering information, and performing targeted actions.'
 readme = "README.md"
 requires-python = ">=3.7"
 license = "MIT"
@@ -37,10 +37,16 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Image Recognition",
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
-dependencies = [ 
-  "tldextract~=3.4.4",
-  "selenium==4.9.0"
-]  # TODO check if packages that come pre-installed should be listed as deps
+dependencies = [
+    "bs4",
+    "html2text",
+    "numpy",
+    "pillow",
+    "phonenumbers",
+    "selenium",
+    "tensorflow",
+    "tldextract",
+]
 
 [project.urls]
 Documentation = "https://github.com/todorovicsrdjan/profilescout#readme"
