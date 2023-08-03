@@ -3,7 +3,7 @@ import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 
-from common.constants import ConstantsNamespace
+from profilescout.common.constants import ConstantsNamespace
 
 
 constants = ConstantsNamespace

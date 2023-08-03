@@ -1,4 +1,4 @@
-SRC_DIR = src/
+SRC_DIR = profilescout/
 TEST_DIR = tests/
 
 .PHONY: init test

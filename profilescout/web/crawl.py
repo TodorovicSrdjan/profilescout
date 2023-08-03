@@ -8,9 +8,9 @@ from io import StringIO
 from dataclasses import dataclass
 from http.client import RemoteDisconnected
 
-from web.webdriver import setup_web_driver
-from web.manager import CrawlManager, ActionManager, CrawlStatus
-from common.constants import ConstantsNamespace
+from profilescout.web.webdriver import setup_web_driver
+from profilescout.web.manager import CrawlManager, ActionManager, CrawlStatus
+from profilescout.common.constants import ConstantsNamespace
 
 
 constants = ConstantsNamespace()

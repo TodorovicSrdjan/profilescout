@@ -9,7 +9,7 @@ from html2text import HTML2Text
 from collections import defaultdict
 from phonenumbers import PhoneNumberMatcher, PhoneNumberFormat, format_number, parse
 
-from link.utils import to_key, is_url
+from profilescout.link.utils import to_key, is_url
 
 
 PATTERNS = {'unwanted_tag__has_placeholder': r'(<\/?(?:b|i|strong|em|blockquote|h[1-6])\b[^>]*>)',

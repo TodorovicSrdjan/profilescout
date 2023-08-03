@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 
 from dataclasses import dataclass
 
-from common.constants import ConstantsNamespace
-from common.exceptions import LongFilenameException
+from profilescout.common.constants import ConstantsNamespace
+from profilescout.common.exceptions import LongFilenameException
 
 
 constants = ConstantsNamespace

@@ -8,9 +8,9 @@ from io import BytesIO
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import WebDriverException, StaleElementReferenceException
 
-from common.constants import ConstantsNamespace
-from link.utils import PageLink, is_valid, url2file_path
-from classification.classifier import ImageClassifier
+from profilescout.common.constants import ConstantsNamespace
+from profilescout.link.utils import PageLink, is_valid, url2file_path
+from profilescout.classification.classifier import ImageClassifier
 
 
 constants = ConstantsNamespace

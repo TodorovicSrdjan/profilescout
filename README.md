@@ -149,7 +149,7 @@ python3 main.py -b -t `nproc` -f links.txt -d 0 -ep /data
 Scrape profile pages (`-a scrape_profiles`) and prioritize links that are relevant to some specific domain (`-br`). 
 For example, if we were searching for profile pages of professors we would like to give priority to links that 
 contain related terms which could lead us to the profile page. Note: you can change it in file 
-[constants.py](./src/profilescout/common/constants.py#34)
+[constants.py](./profilescout/common/constants.py#34)
 ```Bash
 python3 main.py -br -t `nproc` -f links.txt -a scrape_profiles -mp 30
 ```
@@ -201,7 +201,7 @@ wget https://huggingface.co/tsrdjan/scooby/resolve/main/scooby.h5
 5. Explore
 ```
 cd ..
-python3 src/profilescout/main.py -h
+python3 profilescout/main.py -h
 ```
 
 ## Docker setup
@@ -218,7 +218,7 @@ Add `--rm` if you want it to be disposable (one-time task)
 
 2. Test deployment (inside docker container)
 ```Bash
-python3 src/profilescout/main.py -mp 4 -t 1 -ep '/data' -p --url https://en.wikipedia.org/wiki/GNU
+python3 profilescout/main.py -mp 4 -t 1 -ep '/data' -p --url https://en.wikipedia.org/wiki/GNU
 ```
 
 ## Used third-party packages

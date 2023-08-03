@@ -1,11 +1,11 @@
 from enum import Enum
 from selenium.common.exceptions import WebDriverException
 
-from web.webpage import Webpage, WebpageActionType
-from common.constants import ConstantsNamespace
-from common.exceptions import parse_web_driver_exception
-from link.utils import PageLink, remove_duplicates, prioritize_relevant, to_abs_path, most_common_format
-from link.utils import filter_out_invalid, filter_out_visited, filter_out_present_links, filter_out_long
+from profilescout.web.webpage import Webpage, WebpageActionType
+from profilescout.common.constants import ConstantsNamespace
+from profilescout.common.exceptions import parse_web_driver_exception
+from profilescout.link.utils import PageLink, remove_duplicates, prioritize_relevant, to_abs_path, most_common_format
+from profilescout.link.utils import filter_out_invalid, filter_out_visited, filter_out_present_links, filter_out_long
 
 
 constants = ConstantsNamespace

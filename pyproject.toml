@@ -57,7 +57,7 @@ exclude = [
 ]
 
 [tool.hatch.version]
-path = "src/profilescout/__about__.py"
+path = "profilescout/__about__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
@@ -87,7 +87,7 @@ dependencies = [
   "ruff>=0.0.243"
 ]
 [tool.hatch.envs.lint.scripts]
-typing = "mypy --install-types --non-interactive {args:src/profilescout tests}"
+typing = "mypy --install-types --non-interactive {args:profilescout tests}"
 style = [
   "ruff {args:.}",
   "black --check --diff {args:.}",
@@ -167,11 +167,11 @@ source_pkgs = ["profilescout", "tests"]
 branch = true
 parallel = true
 omit = [
-  "src/profilescout/__about__.py",
+  "profilescout/__about__.py",
 ]
 
 [tool.coverage.paths]
-profilescout = ["src/profilescout", "*/profilescout/src/profilescout"]
+profilescout = ["profilescout", "*/profilescout/profilescout"]
 tests = ["tests", "*/profilescout/tests"]
 
 [tool.coverage.report]

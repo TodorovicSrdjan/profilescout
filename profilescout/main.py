@@ -1,15 +1,15 @@
 import os
 import sys
 import textwrap
-
 from concurrent.futures import ThreadPoolExecutor, wait
 
-from common.constants import ConstantsNamespace
-from link.utils import PageLink, to_fqdn, to_base_url, replace_param_vals, match_profile_fmt
-from web.webpage import WebpageActionType, WebpageAction, ScrapeOption
-from web.crawl import CrawlOptions, CrawlPlan, crawl_website
-from classification.classifier import CLASSIFIERS_DIR
-from extraction.htmlextract import get_resumes_from_dir
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from profilescout.common.constants import ConstantsNamespace
+from profilescout.link.utils import PageLink, to_fqdn, to_base_url, replace_param_vals, match_profile_fmt
+from profilescout.web.webpage import WebpageActionType, WebpageAction, ScrapeOption
+from profilescout.web.crawl import CrawlOptions, CrawlPlan, crawl_website
+from profilescout.classification.classifier import CLASSIFIERS_DIR
+from profilescout.extraction.htmlextract import get_resumes_from_dir
 
 
 constants = ConstantsNamespace

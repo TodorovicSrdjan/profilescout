@@ -1,6 +1,6 @@
 import os
 
-from common.constants import ConstantsNamespace
+from profilescout.common.constants import ConstantsNamespace
 
 import numpy as np
 import tensorflow as tf
@@ -11,7 +11,6 @@ constants = ConstantsNamespace
 
 CLASSIFIERS_DIR = os.path.abspath(
     os.path.join(__file__,
-                 os.pardir,
                  os.pardir,
                  os.pardir,
                  os.pardir,

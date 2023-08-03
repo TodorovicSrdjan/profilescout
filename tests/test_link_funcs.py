@@ -1,1 +1,1 @@
-from .context import sample
+from context import profilescout
