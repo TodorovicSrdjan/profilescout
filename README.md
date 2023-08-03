@@ -24,7 +24,7 @@
 
 Profiel Scout can be useful to: 
 1. Investigators and [OSINT Specialists](https://en.wikipedia.org/wiki/Open-source_intelligence) (information extraction, creating information graphs, ...)
-2. [Penetration Testers](https://en.wikipedia.org/wiki/Penetration_test) and Hackers/[Social Engineers](https://en.wikipedia.org/wiki/Social_engineering_(security)) (information extraction, reconnaissance, profile building)
+2. [Penetration Testers](https://en.wikipedia.org/wiki/Penetration_test) and Ethical Hackers/[Social Engineers](https://en.wikipedia.org/wiki/Social_engineering_(security)) (information extraction, reconnaissance, profile building)
 3. Scientists and researchers (data engineering, data science, social science, research)
 4. Companies (talent research, marketing, contact acquisition/harvesting)
 5. Organizations (contact acquisition/harvesting, data collecting, database updating)
@@ -117,7 +117,7 @@ RELEVANT_WORDS=['profile', 'user', 'users', 'about-us', 'team', 'employees', 'st
 
 # Common Use Cases
 
-Note: Order of arguments / switches doesn't metter
+Note: Order of arguments/switches doesn't matter
 
 ## Scraping
 
@@ -187,7 +187,7 @@ source /path/to/some/dir/bin/activate
 ```
 
 3. Install requirements
-```Shell
+```Bash
 pip3 install -r requirements
 ```
 
@@ -209,7 +209,9 @@ python3 profilescout/main.py -h
 1. Create image and run container. Execute this in project's directory
 ```Bash
 mkdir "/path/to/screenshot/dir/"            # if it does not exist
-SS_EXPORT_PATH="/path/to/screenshot/dir/"   # add to .bashrc (or equivalent for other )
+# this line may differ depending on your shell, 
+# so check the documentation for the equivalent file to .bashrc
+echo 'export SS_EXPORT_PATH="/path/to/screenshot/dir/"' >> ~/.bashrc
 docker build -t profilescout .
 docker run -it -v "$SS_EXPORT_PATH":/data profilescout
 ```
@@ -222,14 +224,14 @@ python3 profilescout/main.py -mp 4 -t 1 -ep '/data' -p --url https://en.wikipedi
 ```
 
 ## Used third-party packages
-* `selenium`
 * `bs4`
-* `tensorflow`
+* `html2text`
 * `numpy`
 * `pillow`
-* `html2text`
-* `tldextract` 
 * `phonenumbers`
+* `selenium`
+* `tensorflow`
+* `tldextract` 
 
 # Possibilities for future improvements
 
