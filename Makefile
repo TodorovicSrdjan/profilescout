@@ -13,5 +13,5 @@ lint:
 	flake8 $(SRC_DIR) --max-line-length 140
 
 clean:
-	rm -rf ./downloads/* 2>/dev/null
+	rm -rf ./results/* 2>/dev/null
 	rm nohup.out 2>/dev/null
