@@ -5,9 +5,7 @@ from enum import Enum
 from PIL import Image
 from io import BytesIO
 
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import WebDriverException, StaleElementReferenceException
-
+from profilescout.common.exceptions import WebDriverException, StaleElementReferenceException
 from profilescout.common.constants import ConstantsNamespace
 from profilescout.link.utils import PageLink, is_valid, url2file_path
 from profilescout.classification.classifier import ImageClassifier
@@ -80,7 +78,7 @@ class Webpage:
         return False
 
     def get_html(self):
-        return self.__web_driver.page_source
+        return self.__web_driver.get_page_source()
 
     def take_screenshot(self, width=constants.WIDTH, height=constants.HEIGHT):
         '''takes screenshot of current page and returns image as byte array'''
@@ -146,7 +144,7 @@ class Webpage:
         xpath = '//a[@href]'
         if from_structure:
             xpath = '//table//a[@href] | //ul//a[@href] | //ol//a[@href]'
-        a_tags = self.__web_driver.find_elements(By.XPATH, xpath)
+        a_tags = self.__web_driver.find_elements_with_xpath(xpath)
         for a_tag in a_tags:
             href = ''
             try:

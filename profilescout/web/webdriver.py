@@ -1,9 +1,14 @@
 import platform
-
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement as SeleniumWebElement
+from selenium.common.exceptions import (
+    StaleElementReferenceException as SeleniumStaleElementReferenceException, 
+    WebDriverException as SeleniumWebDriverException)
 
 from profilescout.common.constants import ConstantsNamespace
+from profilescout.common.wrappers import WebElementWrapper, WebDriverWrapper
 
 
 constants = ConstantsNamespace
@@ -49,4 +54,51 @@ def setup_web_driver():
     # wait for the page to fully load
     web_driver.implicitly_wait(constants.IMPL_WAIT_FOR_FULL_LOAD)
 
-    return web_driver
+    return WebDriver(web_driver)
+
+
+class WebElement(WebElementWrapper):
+    """Implementation of WebElementWrapper that wraps WebElement."""
+
+    def __init__(self, element):
+        self.element = element
+
+    def get_attribute(self, name):
+        try:
+            return self.element.get_attribute(name)
+        except SeleniumStaleElementReferenceException as e:
+            raise StaleElementReferenceException.from_stale_element_exception(e)
+
+
+class WebDriver(WebDriverWrapper):
+    """Implementation of WebDriverWrapper that wraps WebDriver."""
+
+    def __init__(self, driver):
+        self.__driver = driver
+
+    def get(self, url):
+        try:
+            return self.__driver.get(url)
+        except SeleniumWebDriverException as e:
+            raise WebDriverException.from_webdriver_exception(e)
+
+    def get_screenshot_as_png(self):
+        return self.__driver.get_screenshot_as_png()
+
+    def save_screenshot(self, path):
+        return self.__driver.save_screenshot(path)
+
+    def get_page_source(self):
+        return self.__driver.page_source
+
+    def find_elements_with_xpath(self, xpath):
+        return [WebElement(el) for el in self.__driver.find_elements(By.XPATH, xpath)]
+
+    def execute_script(self, script):
+        return self.__driver.execute_script(script)
+
+    def set_window_size(self, width, height):
+        return self.__driver.set_window_size(width, height)
+    
+    def quit(self):
+        self.__driver.quit()

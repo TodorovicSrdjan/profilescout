@@ -27,3 +27,47 @@ class LongFilenameException(Exception):
     def __init__(self, message, limit):
         super().__init__(message)
         self.limit = limit
+
+
+class WebDriverException(Exception):
+    """Custom exception to abstract WebDriverException from users."""
+
+    def __init__(self, message, screen=None, stacktrace=None, filename=None, lineno=None):
+        self.message = message
+        self.screen = screen
+        self.stacktrace = stacktrace
+        self.filename = filename
+        self.lineno = lineno
+        super().__init__(self.message)
+
+    @staticmethod
+    def from_webdriver_exception(e):
+        return WebDriverException(
+            message=str(e),
+            screen=getattr(e, 'screen', None),
+            stacktrace=getattr(e, 'stacktrace', None),
+            filename=getattr(e, 'filename', None),
+            lineno=getattr(e, 'lineno', None)
+        )
+
+
+class StaleElementReferenceException(Exception):
+    """Custom exception to abstract StaleElementReferenceException from users."""
+
+    def __init__(self, message, screen=None, stacktrace=None, filename=None, lineno=None):
+        self.message = message
+        self.screen = screen
+        self.stacktrace = stacktrace
+        self.filename = filename
+        self.lineno = lineno
+        super().__init__(self.message)
+
+    @staticmethod
+    def from_stale_element_exception(e):
+        return StaleElementReferenceException(
+            message=str(e),
+            screen=getattr(e, 'screen', None),
+            stacktrace=getattr(e, 'stacktrace', None),
+            filename=getattr(e, 'filename', None),
+            lineno=getattr(e, 'lineno', None)
+        )
