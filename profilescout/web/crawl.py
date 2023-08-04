@@ -30,7 +30,6 @@ class CrawlOptions:
 def _close_everything(web_driver, out_file, err_file, export_path, use_buffer):
     if web_driver is not None:
         web_driver.quit()
-
     # make sure that everything is flushed before stream is closed
     out_file.flush()
     err_file.flush()
@@ -38,14 +37,11 @@ def _close_everything(web_driver, out_file, err_file, export_path, use_buffer):
     if use_buffer:
         out_content = out_file.getvalue()
         err_content = err_file.getvalue()
-
         # close buffers
         out_file.close()
         err_file.close()
-
         # create log files
         out_file, err_file = _create_out_and_err_files(export_path)
-
         # write buffered contents to log files
         out_file.write(out_content)
         err_file.write(err_content)
@@ -54,7 +50,6 @@ def _close_everything(web_driver, out_file, err_file, export_path, use_buffer):
     else:
         if out_file != sys.stdout:
             out_file.close()
-
         if err_file != sys.stderr:
             err_file.close()
 
@@ -79,9 +74,8 @@ def crawl_website(export_path, base_url, plan):
     web_driver = None
     out_file = sys.stdout
     err_file = sys.stderr
-
     try:
-        web_driver = setup_web_driver()
+        # prepare output files and directories
         export_path_exists = True
         try:
             os.mkdir(export_path)
@@ -90,7 +84,6 @@ def crawl_website(export_path, base_url, plan):
         except OSError:
             print(f'ERROR: Cannot create directory at {export_path!r}, stderr and stdout will be used')
             export_path_exists = False
-
         if export_path_exists:
             # open log files for writing if the directory is created
             if plan.options.use_buffer:
@@ -101,22 +94,20 @@ def crawl_website(export_path, base_url, plan):
             print(f'INFO: Logs for {base_url!r} are located at {export_path!r}')
         else:
             export_path = '.'
-
         if plan.options.scraping:
             try:
                 os.mkdir(os.path.join(export_path, 'html'))
                 os.mkdir(os.path.join(export_path, 'screenshots'))
             except Exception:
                 pass
-
+        # initialize tools for crawling
+        web_driver = setup_web_driver()
         crawl_manager = CrawlManager(web_driver, base_url, out_file, err_file)
         crawl_manager.set_options(
             plan.options.max_depth,
             plan.options.max_pages,
             plan.options.bump_relevant)
-
         action_manager = ActionManager(out_file, err_file)
-
         # iterates until there aren't any links to be visited
         # if max depth is reached link extraction is ignored and all links up to that depth are visited and saved
         while True:
@@ -133,7 +124,9 @@ def crawl_website(export_path, base_url, plan):
 
             # perform action on visited page
             crawl_status = CrawlStatus.CONTINUE
-            if plan.action_allowed():
+            if not plan.action_allowed():
+                print(f'INFO: Skipped action on the page: {curr_page_link.url}', file=out_file)
+            else:
                 action = plan.get_curr_action()
                 action_result = action_manager.perform_action(crawl_manager.curr_page, action)
                 crawl_status = crawl_manager.process_action_result(action_result, action.action_type)
@@ -141,7 +134,6 @@ def crawl_website(export_path, base_url, plan):
                     crawl_manager.increase_count()
                     if crawl_manager.is_page_max_reached():
                         break
-
             # check if current stage is over
             if crawl_status == CrawlStatus.NEXT_STAGE:
                 result = action_result.val
@@ -149,11 +141,12 @@ def crawl_website(export_path, base_url, plan):
                 has_next = plan.next_stage(crawl_manager, result)
                 if not has_next:
                     break
-
+            # check if sublinks should be queued for visiting
             if crawl_status != CrawlStatus.SKIP_SUBLINKS or not plan.skip_sublinks():
                 filters = plan.filters
                 crawl_manager.queue_sublinks(plan.options.include_fragment, filters, plan.links_from_structure)
                 plan.queued_sublinks()
+            # prepare for next visit
             out_file.flush()
             err_file.flush()
             time.sleep(plan.options.crawl_sleep)
