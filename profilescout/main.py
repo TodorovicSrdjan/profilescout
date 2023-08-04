@@ -12,13 +12,11 @@ from profilescout.classification.classifier import CLASSIFIERS_DIR
 from profilescout.extraction.htmlextract import get_resumes_from_dir
 
 
-constants = ConstantsNamespace
+constants = ConstantsNamespace()
 
 
 def is_valid_sublink(url, fmt, placeholder):
-    if fmt is None:
-        return True
-    if match_profile_fmt(url, fmt, placeholder):
+    if fmt is None or match_profile_fmt(url, fmt, placeholder):
         return True
     return False
 
@@ -35,23 +33,14 @@ def scrape_profiles_transition(plan, options, curr_page, prev_result):
     plan.options.max_depth = curr_page.link.depth
 
 
-def main(url, urls_file_path, export_path, directory,
-         crawl_sleep,
-         depth, max_pages, max_threads,
-         include_fragment, bump_relevant, peserve_uri, use_buffer,
-         action_type, scrape_option,
-         resolution, image_classifier):
+def generate_crawl_inputs(
+        url, urls_file_path, export_path,
+        crawl_sleep, depth, max_pages, max_threads,
+        include_fragment, bump_relevant, peserve_uri, use_buffer,
+        action_type, scrape_option,
+        resolution, image_classifier):
     user_inputs = []
     crawl_inputs = []
-    constants = ConstantsNamespace()
-
-    if directory is not None:
-        if export_path == '':
-            export_path = None
-        resumes = get_resumes_from_dir(directory, export_path)
-        print(resumes)
-        return
-
     if urls_file_path is None:
         user_inputs += [(url, depth, crawl_sleep)]
     else:
@@ -59,12 +48,11 @@ def main(url, urls_file_path, export_path, directory,
         lines = []
         with open(urls_file_path, 'r') as f:
             lines = f.readlines()
-
         for line in lines:
             # set default or passed values from command line in case
             # they are not present in the file for given line
             read_depth, read_crawl_sleep = depth, crawl_sleep
-
+            # extract fields
             line = line.replace('\n', '').strip()
             parts = line.split(' ')
             if len(parts) == 1 and parts[0] != '':
@@ -76,26 +64,21 @@ def main(url, urls_file_path, export_path, directory,
             else:
                 print(f'WARN: {line=} is not in valid format. Ignored')
                 continue
-
             if not read_url.startswith('http://') and not read_url.startswith('https://'):
                 print(f"WARN: {read_url=} should start with 'http://' or 'https://'. Ignored")
                 continue  # TODO add option to choose action in this situation
-
             user_inputs += [(read_url, read_depth, read_crawl_sleep)]
-
-    # if there are too many links buffer output to avoid load on storage device
+    # if there are too many links, buffer output to avoid load on storage device
     if len(user_inputs) > constants.BUFF_THRESHOLD:
         use_buffer = True
-
     # prepare crawl inputs
-    scraping = False
     for read_url, read_depth, read_crawl_sleep in user_inputs:
-        output_fname = to_fqdn(read_url)
-        export_path_for_url = os.path.join(export_path, output_fname)
-
         stages = []
         actions = []
         scraping = True
+        output_fname = to_fqdn(read_url)
+        export_path_for_url = os.path.join(export_path, output_fname)
+        # define and configure thinkgs related to actions
         if action_type != WebpageActionType.SCRAPE_PROFILES:
             args = [action_type]
             if action_type == WebpageActionType.SCRAPE_PAGES:
@@ -108,12 +91,8 @@ def main(url, urls_file_path, export_path, directory,
             find_origin_args = [WebpageActionType.FIND_ORIGIN, image_classifier, *resolution]
             scrape_profils_args = [WebpageActionType.SCRAPE_PAGES, export_path_for_url, scrape_option, *resolution]
             actions = [WebpageAction(*find_origin_args), WebpageAction(*scrape_profils_args)]
-
             stages = [scrape_profiles_transition]
-
-        if not peserve_uri:
-            read_url = to_base_url(read_url)
-
+        # craft crawl input
         crawl_options = CrawlOptions(
             max_depth=read_depth,
             max_pages=max_pages,
@@ -122,24 +101,41 @@ def main(url, urls_file_path, export_path, directory,
             bump_relevant=bump_relevant,
             use_buffer=use_buffer,
             scraping=scraping)
-
         plan = CrawlPlan(crawl_options, stages, actions)
-
+        if not peserve_uri:
+            read_url = to_base_url(read_url)
         crawl_inputs += [(
             export_path_for_url,
             read_url,
             plan)]
+    return crawl_inputs
 
+
+def main(url, urls_file_path, export_path, directory,
+         crawl_sleep, depth, max_pages, max_threads,
+         include_fragment, bump_relevant, peserve_uri, use_buffer,
+         action_type, scrape_option,
+         resolution, image_classifier):
+    # check if info extraction is chosen
+    if directory is not None:
+        if export_path == '':
+            export_path = None
+        resumes = get_resumes_from_dir(directory, export_path)
+        print(resumes)
+        return
+    crawl_inputs = generate_crawl_inputs(
+        url, urls_file_path, export_path,
+        crawl_sleep, depth, max_pages, max_threads,
+        include_fragment, bump_relevant, peserve_uri, use_buffer,
+        action_type, scrape_option,
+        resolution, image_classifier)
+    # crawl each website in seperate thread
     print(f'INFO: PID: {os.getpid()!r}')
     print('INFO: Start submitting URls for crawling...')
-
-    # crawl each website in seperate threead
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         # Submit each URL for crawling
         futures = [executor.submit(crawl_website, *crawl_input) for crawl_input in crawl_inputs]
-
         print('INFO: Waiting threads to complete...')
-
         # Wait for all tasks to complete
         wait(futures)
         print('INFO: Threads have completed the crawling')
@@ -174,7 +170,6 @@ if __name__ == "__main__":
 
             RELEVANT_WORDS={constants.RELEVANT_WORDS}
             '''))
-
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument(
         '--url',
