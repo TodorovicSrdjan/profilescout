@@ -179,137 +179,92 @@ if __name__ == "__main__":
     input_group.add_argument(
         '--url',
         help='URL of the website to crawl',
-        required=False,
         dest='url')
     input_group.add_argument(
         '-f', '--file',
         help='Path to the file with URLs of the websites to crawl',
-        required=False,
-        dest='urls_file_path',
-        default=None,
-        type=str)
+        dest='urls_file_path')
     input_group.add_argument(
         '-D', '--directory',
         help="Extract data from HTML files in the directory. To avoid saving output, set '-ep'/'--export-path' to ''",
-        required=False,
-        dest='directory',
-        default=None,
-        type=str)
+        dest='directory')
 
     parser.add_argument(
         '-a', '--action',
         help="Action to perform at a time of visiting the page (default: %(default)s)",
-        required=False,
         dest='action',
-        choices=action_choices,
-        default=default_action_choice,
-        type=str)
+        choices=action_choices, default=default_action_choice,)
     parser.add_argument(
         '-b', '--buffer',
         help="Buffer errors and outputs until crawling of website is finished and then create logs",
-        required=False,
         dest='use_buffer',
-        action='store_const',
-        const=True,
-        default=False)
+        action='store_const', const=True, default=False)
     parser.add_argument(
         '-br', '--bump-relevant',
         help="Bump relevant links to the top of the visiting queue (based on RELEVANT_WORDS list)",
-        required=False,
         dest='bump_relevant',
-        action='store_const',
-        const=True,
-        default=False)
+        action='store_const', const=True, default=False)
     parser.add_argument(
         '-ep', '--export-path',
         help='Path to destination directory for exporting',
-        required=False,
         dest='export_path',
         default='./results')
     parser.add_argument(
         '-ic', '--image-classifier',
         help="Image classifier to be used for identifying profile pages (default: %(default)s)",
-        required=False,
         dest='image_classifier',
-        choices=constants.IMAGE_CLASSIFIERS,
-        default=constants.IMAGE_CLASSIFIERS[0],
-        type=str)
+        choices=constants.IMAGE_CLASSIFIERS, default=constants.IMAGE_CLASSIFIERS[0])
     parser.add_argument(
         '-cs', '--crawl-sleep',
         help='Time to sleep between each page visit (default: %(default)s)',
-        required=False,
         dest='crawl_sleep',
-        default=2,
-        type=int)
+        default=2, type=int)
     parser.add_argument(
         '-d', '--depth',
         help='Maximum crawl depth (default: %(default)s)',
-        required=False,
         dest='depth',
-        default=2,
-        type=int)
+        default=2, type=int)
     parser.add_argument(
         '-if', '--include-fragment',
         help="Consider links with URI Fragment (e.g. http://example.com/some#fragment) as seperate page",
-        required=False,
         dest='include_fragment',
-        action='store_const',
-        const=True,
-        default=False)
+        action='store_const', const=True, default=False)
     parser.add_argument(
         '-ol', '--output-log-path',
         help="Path to output log file. Ignored if '-f'/'--file' is used",
-        required=False,
-        dest='out_log_path',
-        default=None,
-        type=str)
+        dest='out_log_path')
     parser.add_argument(
         '-el', '--error-log-path',
         help="Path to error log file. Ignored if '-f'/'--file' is used",
-        required=False,
-        dest='err_log_path',
-        default=None,
-        type=str)
+        dest='err_log_path')
     parser.add_argument(
         '-so', '--scrape-option',
         help="Data to be scraped (default: %(default)s)",
-        required=False,
         dest='scrape_option',
-        choices=scrape_choices,
-        default=default_scrape_choice,
-        type=str)
+        choices=scrape_choices, default=default_scrape_choice)
     parser.add_argument(
         '-t', '--threads',
         help="Maximum number of threads to use if '-f'/'--file' is provided (default: %(default)s)",
-        required=False,
         dest='max_threads',
-        default=4,
-        type=int)
+        default=4, type=int)
     parser.add_argument(
         '-mp', '--max-pages',
         help='''
                 Maximum number of pages to scrape
                 and page is considered scraped if the action is performed successfuly (default: unlimited)
                 ''',
-        required=False,
         dest='max_pages',
-        default=None,
         type=int)
     parser.add_argument(
         '-p', '--preserve',
         help="Preserve whole URI (e.g. \'http://example.com/something/\' instead of  \'http://example.com/\')",
-        required=False,
         dest='peserve_uri',
-        action='store_const',
-        const=True,
-        default=False)
+        action='store_const', const=True, default=False)
     parser.add_argument(
         '-r', '--resolution',
         help="Resolution of headless browser and output images. Format: WIDTHxHIGHT (default: %(default)s)",
-        required=False,
         dest='resolution',
-        default=f'{constants.WIDTH}x{constants.HEIGHT}',
-        type=str)
+        default=f'{constants.WIDTH}x{constants.HEIGHT}')
 
     args = parser.parse_args()
 
