@@ -143,7 +143,18 @@ class Webpage:
         urls = []
         xpath = '//a[@href]'
         if from_structure:
-            xpath = '//table//a[@href] | //ul//a[@href] | //ol//a[@href]'
+            xpath = '''//*[self::table or self::ol or self::ul or self::section]//a[@href
+                            and not(ancestor::header or ancestor::footer or ancestor::nav)
+                            and not(ancestor::div[contains(@id, 'footer')])
+                            and not(ancestor::div[contains(@id, 'nav')])
+                            and not(ancestor::div[contains(@id, 'navigation')])
+                            and not(ancestor::div[contains(@class, 'footer')])
+                            and not(ancestor::div[contains(@class, 'nav')])
+                            and not(ancestor::div[contains(@class, 'navigation')])
+                            and not(ancestor::div[contains(@role, 'footer')])
+                            and not(ancestor::div[contains(@role, 'nav')])
+                            and not(ancestor::div[contains(@role, 'navigation')])
+                        ]'''
         a_tags = self.__web_driver.find_elements_with_xpath(xpath)
         for a_tag in a_tags:
             href = ''
