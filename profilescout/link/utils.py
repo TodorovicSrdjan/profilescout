@@ -46,13 +46,21 @@ def is_valid(url, base_url):
         if ext.lower() in constants.INVALID_EXTENSIONS:
             return False
 
-    base_domain = tldextract.extract(base_url).domain
-    link_domain = tldextract.extract(url).domain
-
+    base_extract = tldextract.extract(base_url)
+    link_extract = tldextract.extract(url)
+    base_subdo_reversed = base_extract.subdomain.split('.')[::-1]
+    link_subdo_reversed = link_extract.subdomain.split('.')[::-1]
+    common_len = min(len(base_subdo_reversed), len(link_subdo_reversed))
     # TODO rethink; could cause problem with some sites that have profiles
     # on another url or as PDF/DOCX/...
     has_protocol = url.startswith('http://') or url.startswith('https://')
-    if has_protocol and base_domain != link_domain:
+    if (
+        has_protocol
+        and (  # check if they have common subdomain (base subdomain must be contained in url's subdomain)
+            base_extract.domain != link_extract.domain
+            or any(base_subdo_reversed[i] != link_subdo_reversed[i] for i in range(common_len))
+        )
+    ):
         return False
 
     return True
