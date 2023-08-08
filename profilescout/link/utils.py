@@ -158,6 +158,17 @@ def prioritize_relevant(link_queue):
     return front + rest
 
 
+def with_and_without_www(url):
+    parsed_url = urlparse(url)
+    if parsed_url.scheme == '' or parsed_url.hostname is None:
+        if url.startswith('www.'):
+            return url, url.replace('www.', '')
+        return f'www.{url}', url
+    if parsed_url.hostname.startswith('www'):
+        return url, url.replace('www.', '')
+    return url.replace(f'{parsed_url.scheme}://', f'{parsed_url.scheme}://www.'), url
+
+
 def filter_out_invalid(page_links, base_url):
     result = filter(lambda pl: is_valid(pl.url, base_url),
                     page_links)
@@ -165,15 +176,22 @@ def filter_out_invalid(page_links, base_url):
 
 
 def filter_out_visited(page_links, visited_links):
-    result = filter(lambda pl: pl.url not in visited_links,
-                    page_links)
-    return list(result)
+    result = []
+    for page_link in page_links:
+        www, wo_www = with_and_without_www(page_link.url)
+        if www not in visited_links and wo_www not in visited_links:
+            result += [page_link]
+    return result
 
 
 def filter_out_present_links(page_links, links_to_visit):
-    result = filter(lambda pl: pl.url not in [to_visit.url for to_visit in links_to_visit],
-                    page_links)
-    return list(result)
+    result = []
+    urls_to_visit = [to_visit.url for to_visit in links_to_visit]
+    for page_link in page_links:
+        www, wo_www = with_and_without_www(page_link.url)
+        if www not in urls_to_visit and wo_www not in urls_to_visit:
+            result += [page_link]
+    return result
 
 
 def filter_out_long(page_links, err_file=sys.stderr):
