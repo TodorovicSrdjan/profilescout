@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class WebElementWrapper(ABC):
     """Interface/Base class to abstract WebElement usage."""
 
@@ -40,7 +41,7 @@ class WebDriverWrapper(ABC):
     @abstractmethod
     def set_window_size(self, width, height):
         pass
-    
+
     @abstractmethod
     def quit(self):
         pass

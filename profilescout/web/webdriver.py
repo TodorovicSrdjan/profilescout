@@ -4,7 +4,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement as SeleniumWebElement
 from selenium.common.exceptions import (
-    StaleElementReferenceException as SeleniumStaleElementReferenceException, 
+    StaleElementReferenceException as SeleniumStaleElementReferenceException,
     WebDriverException as SeleniumWebDriverException)
 
 from profilescout.common.constants import ConstantsNamespace
@@ -99,6 +99,6 @@ class WebDriver(WebDriverWrapper):
 
     def set_window_size(self, width, height):
         return self.__driver.set_window_size(width, height)
-    
+
     def quit(self):
         self.__driver.quit()
