@@ -292,5 +292,6 @@ def most_common_format(urls, placeholder='####'):
 
 def match_profile_fmt(url, fmt, placeholder):
     assert placeholder in fmt, f'expected a format containing the placeholder {placeholder!r}, but recieved: {fmt!r}'
-    fmt_pattern = re.sub(placeholder, r'.+?', fmt)
+    fmt_escaped = re.escape(fmt)
+    fmt_pattern = fmt_escaped.replace(re.escape(placeholder), r'.+?')
     return re.search(fmt_pattern, url)
