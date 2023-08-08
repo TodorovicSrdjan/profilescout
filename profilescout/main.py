@@ -5,32 +5,14 @@ from concurrent.futures import ThreadPoolExecutor, wait
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from profilescout.common.constants import ConstantsNamespace
-from profilescout.link.utils import PageLink, to_fqdn, to_base_url, replace_param_vals, match_profile_fmt
-from profilescout.web.webpage import WebpageActionType, WebpageAction, ScrapeOption
-from profilescout.web.crawl import CrawlOptions, CrawlPlan, crawl_website
+from profilescout.link.utils import to_fqdn, to_base_url
+from profilescout.web.webpage import WebpageActionType, ScrapeOption
+from profilescout.web.crawl import CrawlOptions, crawl_website
 from profilescout.classification.classifier import CLASSIFIERS_DIR
 from profilescout.extraction.htmlextract import get_resumes_from_dir
 
 
-constants = ConstantsNamespace()
-
-
-def is_valid_sublink(url, fmt, placeholder):
-    if fmt is None or match_profile_fmt(url, fmt, placeholder):
-        return True
-    return False
-
-
-def scrape_profiles_transition(plan, options, curr_page, prev_result):
-    plan._CrawlPlan__skip_next_page_action = True
-    plan._CrawlPlan__clear_history = True
-    plan.links_from_structure = True
-    plan.filters = [lambda page_link: is_valid_sublink(page_link.url, prev_result['most_common_format'], '####')]
-    # skip queuing of child pages
-    plan._CrawlPlan__skip_sublinks_after = 1
-    # origin is previous page on depth-1 and we want to use current depth as a max depth
-    plan._CrawlPlan__init_page = PageLink(prev_result['origin'], curr_page.link.depth-1)
-    plan.options.max_depth = curr_page.link.depth
+constants = ConstantsNamespace
 
 
 def generate_crawl_inputs(
@@ -73,25 +55,11 @@ def generate_crawl_inputs(
         use_buffer = True
     # prepare crawl inputs
     for read_url, read_depth, read_crawl_sleep in user_inputs:
-        stages = []
-        actions = []
         scraping = True
         output_fname = to_fqdn(read_url)
         export_path_for_url = os.path.join(export_path, output_fname)
-        # define and configure thinkgs related to actions
-        if action_type != WebpageActionType.SCRAPE_PROFILES:
-            args = [action_type]
-            if action_type == WebpageActionType.SCRAPE_PAGES:
-                args.extend([export_path_for_url, scrape_option, *resolution])
-            elif action_type == WebpageActionType.FIND_ORIGIN:
-                scraping = False
-                args.extend([image_classifier, *resolution])
-            actions = [WebpageAction(*args)]
-        else:
-            find_origin_args = [WebpageActionType.FIND_ORIGIN, image_classifier, *resolution]
-            scrape_profils_args = [WebpageActionType.SCRAPE_PAGES, export_path_for_url, scrape_option, *resolution]
-            actions = [WebpageAction(*find_origin_args), WebpageAction(*scrape_profils_args)]
-            stages = [scrape_profiles_transition]
+        if action_type == WebpageActionType.FIND_ORIGIN:
+            scraping = False
         # craft crawl input
         crawl_options = CrawlOptions(
             max_depth=read_depth,
@@ -100,14 +68,17 @@ def generate_crawl_inputs(
             include_fragment=include_fragment,
             bump_relevant=bump_relevant,
             use_buffer=use_buffer,
-            scraping=scraping)
-        plan = CrawlPlan(crawl_options, stages, actions)
+            scraping=scraping,
+            resolution=resolution,
+            classifier_name=image_classifier)
         if not peserve_uri:
             read_url = to_base_url(read_url)
         crawl_inputs += [(
             export_path_for_url,
             read_url,
-            plan)]
+            crawl_options,
+            action_type,
+            scrape_option)]
     return crawl_inputs
 
 

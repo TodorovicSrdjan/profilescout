@@ -31,21 +31,6 @@ class ActionResult:
         self.msg = msg
 
 
-class WebpageAction:
-    def __init__(self, action_type, *action_args):
-        self.action_type = action_type
-        self.args = action_args
-        self.func = self.__type_to_func()
-
-    def __type_to_func(self):
-        if self.action_type == WebpageActionType.SCRAPE_PAGES:
-            return Webpage.scrape_page
-        elif self.action_type == WebpageActionType.FIND_ORIGIN:
-            return Webpage.is_profile
-
-        return lambda args: f'Unknown function[{args=}]'
-
-
 class Webpage:
     def __init__(self, web_driver, page_link, out_file, err_file):
         self.__web_driver = web_driver

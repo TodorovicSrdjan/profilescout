@@ -3,28 +3,21 @@ import sys
 import time
 import random
 import traceback
+import copy
 
 from io import StringIO
 from dataclasses import dataclass
 from http.client import RemoteDisconnected
 
-from profilescout.web.webdriver import setup_web_driver
-from profilescout.web.manager import CrawlManager, ActionManager, CrawlStatus
 from profilescout.common.constants import ConstantsNamespace
+from profilescout.common.structures import OriginPageDetectionStrategy
+from profilescout.link.utils import is_valid_sublink
+from profilescout.web.manager import CrawlManager, CrawlStatus
+from profilescout.web.webdriver import setup_web_driver
+from profilescout.web.webpage import ScrapeOption, WebpageActionType
 
 
-constants = ConstantsNamespace()
-
-
-@dataclass
-class CrawlOptions:
-    max_depth: int
-    max_pages: int
-    crawl_sleep: int
-    include_fragment: bool
-    bump_relevant: bool
-    use_buffer: bool
-    scraping: bool
+constants = ConstantsNamespace
 
 
 def _close_everything(web_driver, out_file, err_file, export_path, use_buffer):
@@ -33,7 +26,6 @@ def _close_everything(web_driver, out_file, err_file, export_path, use_buffer):
     # make sure that everything is flushed before stream is closed
     out_file.flush()
     err_file.flush()
-
     if use_buffer:
         out_content = out_file.getvalue()
         err_content = err_file.getvalue()
@@ -68,164 +60,227 @@ def _create_out_and_err_files(export_path):
     return out_file, err_file
 
 
-def crawl_website(export_path, base_url, plan):
-    '''A function to crawl links up to a maximum depth'''
-    result = None
-    web_driver = None
-    out_file = sys.stdout
-    err_file = sys.stderr
-    try:
-        # prepare output files and directories
-        export_path_exists = True
-        try:
-            os.mkdir(export_path)
-        except FileExistsError:
-            print(f'INFO: Directory exists at: {export_path}')
-        except OSError:
-            print(f'ERROR: Cannot create directory at {export_path!r}, stderr and stdout will be used')
-            export_path_exists = False
-        if export_path_exists:
-            # open log files for writing if the directory is created
-            if plan.options.use_buffer:
-                out_file = StringIO()
-                err_file = StringIO()
-            else:
-                out_file, err_file = _create_out_and_err_files(export_path)
-            print(f'INFO: Logs for {base_url!r} are located at {export_path!r}')
-        else:
-            export_path = '.'
-        if plan.options.scraping:
-            try:
-                os.mkdir(os.path.join(export_path, 'html'))
-                os.mkdir(os.path.join(export_path, 'screenshots'))
-            except Exception:
-                pass
-        # initialize tools for crawling
-        web_driver = setup_web_driver()
-        crawl_manager = CrawlManager(web_driver, base_url, out_file, err_file)
-        crawl_manager.set_options(
-            plan.options.max_depth,
-            plan.options.max_pages,
-            plan.options.bump_relevant)
-        action_manager = ActionManager(out_file, err_file)
-        # iterates until there aren't any links to be visited
-        # if max depth is reached link extraction is ignored and all links up to that depth are visited and saved
-        while True:
-            # visit page
-            if not crawl_manager.has_next():
-                print(f'INFO: All links at a depth of {plan.options.max_depth} have been visited.',
-                      'Stopping the crawling...',
-                      file=out_file)
+def crawl_website(
+    export_path,
+    base_url,
+    options,
+    action_type,
+    scrape_option
+):
+    detection_strategy = OriginPageDetectionStrategy()
+    if action_type == WebpageActionType.SCRAPE_PAGES:
+        crawler = Crawler(options, None, export_path)
+        for step in crawler.crawl(base_url):
+            crawler.save(scrape_option)
+    elif action_type == WebpageActionType.FIND_ORIGIN:
+        crawler = Crawler(options, detection_strategy, export_path)
+        for step in crawler.crawl(base_url):
+            if detection_strategy.successful():
                 break
-            curr_page_link = crawl_manager.visit_next()
-            if curr_page_link is None:
-                continue
-            print(f'{curr_page_link.depth} {curr_page_link.url}', file=out_file, flush=True)
+    elif action_type == WebpageActionType.SCRAPE_PROFILES:
+        crawler = Crawler(options, detection_strategy, export_path)
+        for step in crawler.crawl(base_url):
+            if detection_strategy.successful():
+                result = detection_strategy.get_result()
+                origin = result['origin']
+                og_crawler = crawler.create_subcrawler()
+                og_crawler.options.max_depth = result['depth'] + 1
+                og_crawler.links_from_structure = True
+                og_crawler.skip_sublinks = True
+                og_crawler.skip_first_page = True
+                og_crawler.sublink_filters = [lambda page_link: is_valid_sublink(page_link.url, result['most_common_format'], '####')]
+                for og_step in og_crawler.crawl(origin, result['depth']):
+                    og_crawler.save(scrape_option)
+                    og_crawler.skip_sublinks = True
+                crawler.mark_as_visited(og_crawler.get_visited_links(), og_crawler.get_scraped_count())
 
-            # perform action on visited page
-            crawl_status = CrawlStatus.CONTINUE
-            if not plan.action_allowed():
-                print(f'INFO: Skipped action on the page: {curr_page_link.url}', file=out_file)
+@dataclass
+class CrawlOptions:
+    max_depth: int = 3
+    max_pages: int = None
+    crawl_sleep: int = 2
+    include_fragment: bool = False
+    bump_relevant: bool = True
+    use_buffer: bool = False
+    scraping: bool = True
+    resolution: tuple = (constants.WIDTH, constants.HEIGHT)
+    classifier_name: object = None
+
+    def increase(self, to_incr):
+        for option, val in to_incr.items():
+            assert val > 0, 'value must be greater then 0'
+            if option == 'max_depth':
+                self.max_depth += val
+            elif option == 'max_pages':
+                self.max_pages += val
+            elif option == 'crawl_sleep':
+                self.crawl_sleep += val
             else:
-                action = plan.get_curr_action()
-                action_result = action_manager.perform_action(crawl_manager.curr_page, action)
-                crawl_status = crawl_manager.process_action_result(action_result, action.action_type)
-                if action_result.successful:  # TODO refactor with new crawl option
-                    crawl_manager.increase_count()
-                    if crawl_manager.is_page_max_reached():
-                        break
-            # check if current stage is over
-            if crawl_status == CrawlStatus.NEXT_STAGE:
-                result = action_result.val
-                print(f'INFO: {action_result.msg}', file=out_file)
-                has_next = plan.next_stage(crawl_manager, result)
-                if not has_next:
-                    break
-            # check if sublinks should be queued for visiting
-            if crawl_status != CrawlStatus.SKIP_SUBLINKS or not plan.skip_sublinks():
-                filters = plan.filters
-                crawl_manager.queue_sublinks(plan.options.include_fragment, filters, plan.links_from_structure)
-                plan.queued_sublinks()
-            # prepare for next visit
-            out_file.flush()
-            err_file.flush()
-            time.sleep(plan.options.crawl_sleep)
-    except RemoteDisconnected as rde:
-        print(f'INFO: Interrupted. Exiting... ({rde!r})', file=err_file)
-    except Exception as e:
-        print(f'ERROR: {e!s}', file=err_file)
-        print(f'{traceback.format_exc()}', file=err_file)
-    finally:
-        _close_everything(web_driver, out_file, err_file, export_path, plan.options.use_buffer)
-        print(f'INFO: Crawling of {base_url!r} is complete')
-    return result
+                raise KeyError(f'provided value {option!r} is not recognised as a crawl option')
 
 
-class CrawlPlan:
-    def __init__(self, options, stages, actions):
-        self.__stages = stages
-        self.__actions = actions
-
-        self.__current_stage_index = 0
-        self.__current_action_index = 0
-
-        self.__init_page = None
-        self.__clear_history = False
-        self.__skip_next_page_action = False
-        self.__skip_sublinks_after = None
-        self.__current_action = actions[0]
-
+class Crawler:
+    def __init__(self, options, detection_strategy, export_path, parent_out_file=None, parent_err_file=None, is_subcrawler=False):
+        self.skip_sublinks = False
+        self.skip_first_page = False
         self.links_from_structure = False
+        self.status = CrawlStatus.NOT_STARTED
+        self.img_width = constants.WIDTH
+        self.img_height = constants.HEIGHT
+        self.sublink_filters = []
+        self.detection_strategy = detection_strategy
         self.options = options
-        self.filters = []
-
-    def get_curr_action(self):
-        return self.__current_action
-
-    def next_stage(self, crawl_manager, prev_stage_result):
-        if len(self.__stages) == self.__current_action_index:
-            return False
-
-        update = self.__stages[self.__current_stage_index]
-        update(self, crawl_manager.get_options(), crawl_manager.curr_page, prev_stage_result)
-
-        if self.__clear_history:
-            crawl_manager.clear_history(self.__init_page)
-
-        # update crawl options
-        max_depth = self.options.max_depth
-        max_pages = self.options.max_pages
-        bump_relevant = self.options.bump_relevant
-        crawl_manager.set_options(max_depth, max_pages, bump_relevant)
-
-        self.__current_stage_index += 1
-
-        return self.next_action()
-
-    def next_action(self):
-        if len(self.__actions) == self.__current_action_index:
-            return False
-        self.__current_action_index += 1
-        self.__current_action = self.__actions[self.__current_action_index]
-        return True
-
-    def action_allowed(self):
-        if self.__skip_next_page_action:
-            self.__skip_next_page_action = False
-            return False
-        return True
-
-    def queued_sublinks(self):
-        if self.__skip_sublinks_after is not None:
-            self.__skip_sublinks_after -= 1
-            if self.__skip_sublinks_after < 0:  # just in case
-                self.__skip_sublinks_after = None
+        self.is_subcrawler = is_subcrawler
+        # prepare output files and directories
+        self.export_path = export_path
+        self.__out_file = sys.stdout
+        self.__err_file = sys.stderr
+        if is_subcrawler:
+            self.__out_file = parent_out_file
+            self.__err_file = parent_err_file
         else:
-            self.links_from_structure = False
+            export_path_exists = True
+            try:
+                os.mkdir(self.export_path)
+            except FileExistsError:
+                print(f'INFO: Directory exists at: {self.export_path}')
+            except OSError:
+                print(f'ERROR: Cannot create directory at {self.export_path!r}, stderr and stdout will be used')
+                export_path_exists = False
+            if export_path_exists:
+                # open log files for writing if the directory is created
+                if self.options.use_buffer:
+                    self.__out_file = StringIO()
+                    self.__err_file = StringIO()
+                else:
+                    self.__out_file, self.__err_file = _create_out_and_err_files(self.export_path)
+            else:
+                self.export_path = '.'
+            if self.options.scraping:
+                try:
+                    os.mkdir(os.path.join(self.export_path, 'html'))
+                    os.mkdir(os.path.join(self.export_path, 'screenshots'))
+                except Exception:
+                    pass
 
-        return self.__skip_sublinks_after
+    def __visit_page(self):
+        if not self.crawl_manager.has_next():
+            print(f'INFO: All links at a depth of {self.options.max_depth} have been visited.',
+                  'Stopping the crawling...',
+                  file=self.__out_file)
+            self.status = CrawlStatus.FINISHED
+            return None
+        self.curr_page = self.crawl_manager.visit_next()
+        if self.curr_page is None:
+            return None
+        print(f'{self.curr_page.link.depth} {self.curr_page.link.url}', file=self.__out_file, flush=True)
+        return self.curr_page
 
-    def skip_sublinks(self):
-        if self.__skip_sublinks_after is not None or self.__skip_sublinks_after == 0:
-            return True
-        return False
+    def __visit_cleanup(self):
+        self.__out_file.flush()
+        self.__err_file.flush()
+        time.sleep(self.options.crawl_sleep)
+
+    def __perform_detection_strategy(self):
+        self.detection_strategy.analyse(self.curr_page, self.options.classifier_name, self.options.resolution)
+        result = self.detection_strategy.get_result()
+        if result is not None:
+            print(f"INFO: {result['message']}", file=self.__out_file)
+        return result
+
+    def __perform_action(self, action, args):
+        action_result = action(**args)
+        if action_result.successful:
+            self.crawl_manager.increase_count()
+            if self.crawl_manager.is_page_max_reached():
+                self.status = CrawlStatus.FINISHED
+        else:
+            action_name = action.__name__
+            print(f'ERROR: Failed to perform action {action_name!r} for: {self.curr_page.link.url}', file=self.__err_file)
+        return action_result
+
+    def __queue_sublinks(self):
+        return self.crawl_manager.queue_sublinks(
+            self.options.include_fragment,
+            self.sublink_filters,
+            self.links_from_structure)
+
+    def crawl(self, base_url, base_depth=0):
+        if not self.is_subcrawler:
+            print(f'INFO: Logs for {base_url!r} are located at {self.export_path!r}')
+        self.__web_driver = setup_web_driver()
+        self.status = CrawlStatus.RUNNING
+        self.crawl_manager = CrawlManager(self.__web_driver, base_url, self.__out_file, self.__err_file, base_depth=base_depth)
+        self.crawl_manager.set_options(
+            self.options.max_depth,
+            self.options.max_pages,
+            self.options.bump_relevant)
+        try:
+            while True:
+                self.skip_sublinks = False
+                current_page = self.__visit_page()
+                if current_page is None or self.status == CrawlStatus.FINISHED:
+                    break
+
+                if self.detection_strategy is not None:
+                    if self.detection_strategy.successful():
+                        self.detection_strategy.reset()  # prep for new origin page
+                    self.__perform_detection_strategy()
+
+                if self.skip_first_page:
+                    self.skip_first_page = False
+                    print(f'INFO: Skipped page: {self.curr_page.link.url}', file=self.__out_file)
+                else:
+                    yield current_page.link
+
+                # execution will resume here so check status to find out if crawling should be finished or not
+                # note: caller might do something like performing action, which can lead to change of the
+                #       crawl status
+                if self.status == CrawlStatus.FINISHED:
+                    break
+
+                if not self.skip_sublinks:
+                    self.__queue_sublinks()
+                self.__visit_cleanup()
+        except RemoteDisconnected as rde:
+            print(f'INFO: Interrupted. Exiting... ({rde!r})', file=self.__err_file)
+        except Exception as e:
+            print(f'ERROR: {e!s}')
+            print(f'{traceback.format_exc()}')
+        finally:
+            if not self.is_subcrawler:
+                _close_everything(self.__web_driver, self.__out_file, self.__err_file, self.export_path, self.options.use_buffer)
+                print(f'INFO: Crawling of {base_url!r} is complete')
+            else:
+                print(f'INFO: Subcrawling of {base_url!r} is complete')
+
+    def create_subcrawler(self):
+        options = copy.copy(self.options)
+        return Crawler(options, None, self.export_path, self.__out_file, self.__err_file, True)
+
+    def save(self, scrape_option):
+        action = self.curr_page.scrape_page
+        if scrape_option == ScrapeOption.ALL:
+            args = {'export_path': self.export_path, 'scrape_option': ScrapeOption.ALL,
+                    'width': self.img_width, 'height': self.img_height}
+        elif scrape_option == ScrapeOption.HTML:
+            action = self.curr_page.get_html
+            args = {}
+        elif scrape_option == ScrapeOption.SCREENSHOT:
+            args = {'export_path': self.export_path, 'scrape_option': ScrapeOption.SCREENSHOT,
+                    'width': self.img_width, 'height': self.img_height}
+        else:
+            return None
+        return self.__perform_action(action, args)
+
+    def get_visited_links(self):
+        return self.crawl_manager.get_visited_links()
+
+    def get_links_to_visit(self):
+        return self.crawl_manager.get_links_to_visit()
+
+    def get_scraped_count(self):
+        return self.crawl_manager.get_scraped_count()
+
+    def mark_as_visited(self, visited_links, scraped_count):
+        return self.crawl_manager.mark_as_visited(visited_links, scraped_count)

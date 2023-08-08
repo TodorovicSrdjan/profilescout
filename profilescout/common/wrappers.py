@@ -8,6 +8,10 @@ class WebElementWrapper(ABC):
     def get_attribute(self, name):
         pass
 
+    @abstractmethod
+    def find_elements_with_xpath(self, xpath):
+        pass
+
 
 class WebDriverWrapper(ABC):
     '''

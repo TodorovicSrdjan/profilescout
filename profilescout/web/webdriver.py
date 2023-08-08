@@ -2,13 +2,13 @@ import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement as SeleniumWebElement
 from selenium.common.exceptions import (
     StaleElementReferenceException as SeleniumStaleElementReferenceException,
     WebDriverException as SeleniumWebDriverException)
 
 from profilescout.common.constants import ConstantsNamespace
 from profilescout.common.wrappers import WebElementWrapper, WebDriverWrapper
+from profilescout.common.exceptions import StaleElementReferenceException, WebDriverException
 
 
 constants = ConstantsNamespace
@@ -68,6 +68,9 @@ class WebElement(WebElementWrapper):
             return self.element.get_attribute(name)
         except SeleniumStaleElementReferenceException as e:
             raise StaleElementReferenceException.from_stale_element_exception(e)
+
+    def find_elements_with_xpath(self, xpath):
+        return [WebElement(el) for el in self.element.find_elements(By.XPATH, xpath)]
 
 
 class WebDriver(WebDriverWrapper):

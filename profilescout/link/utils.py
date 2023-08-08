@@ -320,3 +320,7 @@ def match_profile_fmt(url, fmt, placeholder):
     fmt_escaped = re.escape(fmt)
     fmt_pattern = fmt_escaped.replace(re.escape(placeholder), r'.+?')
     return re.search(fmt_pattern, url)
+
+
+def is_valid_sublink(url, fmt, placeholder):
+    return fmt is None or match_profile_fmt(url, fmt, placeholder)
