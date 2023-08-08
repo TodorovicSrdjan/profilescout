@@ -264,30 +264,54 @@ def replace_param_vals(url, replacement='####'):
     return re.sub(r'(?<=[?&])(.*?)=(.*?)(?=&|$)', r'\1='+replacement, url)
 
 
+def _create_format_freq_tuple(fmt_freq, placeholder='####'):
+    fmt_path_part = fmt_freq[0]
+    qmark_idx = fmt_path_part.find('?')
+    if qmark_idx != -1:
+        fmt_path_part = fmt_path_part[:qmark_idx]
+    query_part = fmt_freq[0][qmark_idx:]
+    query_var_count = query_part.count(placeholder)
+    # penalize those formats which don't have any variable part in url query
+    query_var_count_asc = query_var_count if query_var_count > 0 else sys.maxsize
+    fmt_freq_desc = -fmt_freq[1]
+    var_count_asc = fmt_freq[0].count(placeholder) if fmt_freq[0].count(placeholder) > 0 else sys.maxsize
+    has_slash_desc = '/' not in fmt_freq[0]
+    has_query_desc = '?' not in fmt_freq[0]
+    has_var_in_path_desc = placeholder not in fmt_path_part
+    return has_slash_desc, has_query_desc, has_var_in_path_desc, var_count_asc, query_var_count_asc, fmt_freq_desc
+
+
 def most_common_format(urls, placeholder='####'):
-    parsed_url = urlparse(urls[0])
-    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}/"
-    url_paths = [urlparse(replace_param_vals(url, placeholder)).path[1:] for url in urls]
+    parsed_urls = [urlparse(url) for url in urls]
+    urls_without_domain = [f'{url.path}?{url.query}'
+                           if url.query != '' else url.path
+                           for url in parsed_urls]
+    encoded_urls = [replace_param_vals(url, placeholder) for url in urls_without_domain]
     fmts = dict()
-    for url1 in url_paths:
-        url1 = url1.split('/')
-        for url2 in url_paths:
-            url2 = url2.split('/')
+    for url1 in encoded_urls:
+        url1_parts = url1.split('/')
+        url1_parts = [part for part in url1_parts if part != '']
+        for url2 in encoded_urls:
+            url2_parts = url2.split('/')
+            url2_parts = [part for part in url2_parts if part != '']
             fmt_parts = []
-            lmin = min(len(url1), len(url2))
+            lmin = min(len(url1_parts), len(url2_parts))
             for i in range(lmin):
-                fmt_parts += [url1[i]] if url1[i] == url2[i] else [placeholder]
-            lmax = max(len(url1), len(url2))
+                fmt_parts += [url1_parts[i]] if url1_parts[i] == url2_parts[i] else [placeholder]
+            lmax = max(len(url1_parts), len(url2_parts))
             fmt_parts += [placeholder] * (lmax - lmin)
-            if placeholder in fmt_parts:
-                fmt = '/'.join(fmt_parts)
-                fmts[fmt] = fmts.get(fmt, 0) + 1
+            # if placeholder in fmt_parts or len(fmt_parts) == 1:
+            fmt = '/'.join(fmt_parts)
+            fmts[fmt] = fmts.get(fmt, 0) + 1
     if len(fmts) == 0:
         return None
-    # sort formats by count of '#' in format and negative value of frequency
+    # sort formats by count of '#' in format, negative value of '?' freqency
+    # and negative value of placeholder frequency
     # note: negative value is used in order to achive desc ordering by frequency
-    fmt_freqs = sorted(fmts.items(), key=lambda x: (x[0].count(placeholder), -x[1]))
+    fmt_freqs = sorted(fmts.items(), key=lambda x: _create_format_freq_tuple(x, placeholder))
     common_fmt = fmt_freqs[0][0]
+    parsed_url = urlparse(urls[0])
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}/"
     return base_url + common_fmt
 
 
