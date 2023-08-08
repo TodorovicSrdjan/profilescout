@@ -1,3 +1,3 @@
 [flake8]
-ignore = E402
-filename = main.py
+per-file-ignores =
+    main.py:E402
