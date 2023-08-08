@@ -3,7 +3,7 @@ import os
 import sys
 import random
 import tldextract
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote_plus
 
 from dataclasses import dataclass
 
@@ -148,6 +148,7 @@ def prioritize_relevant(link_queue):
     for page_link in link_queue:
         has_relevant = False
         for word in constants.RELEVANT_WORDS:
+            word = quote_plus(word)
             if word in page_link.url.lower():
                 front.append(page_link)
                 has_relevant = True
