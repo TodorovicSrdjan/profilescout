@@ -246,7 +246,7 @@ if __name__ == "__main__":
         '-mp', '--max-pages',
         help='''
                 Maximum number of pages to scrape
-                and page is considered scraped if the action is performed successfuly (default: unlimited)
+                and page is considered scraped if the action is performed successfully (default: unlimited)
                 ''',
         dest='max_pages',
         type=int)

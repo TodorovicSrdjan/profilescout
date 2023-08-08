@@ -27,7 +27,7 @@
 - add extraction for custom fields
 - improve info extraction
 - add support for profile page scraping
-- add detection of image tag  changes
+- add detection of image tag changes
 - detect & classify different types of links
 - add better detection of profile images
 

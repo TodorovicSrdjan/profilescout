@@ -4,7 +4,7 @@
 ![Last commit](https://img.shields.io/github/last-commit/todorovicsrdjan/profilescout/master)
 ![Repo size](https://img.shields.io/github/repo-size/todorovicsrdjan/profilescout)
 
-**Table of Content**
+**Table of Contents**
 * [About](#about)
 * [Capabilities](#capabilities)
 * [Common Use Cases](#common-use-cases)
@@ -91,7 +91,7 @@ Options:
     Maximum number of threads to use if '-f'/'--file' is provided (default: 4)
     
 -mp MAX_PAGES, --max-pages MAX_PAGES
-    Maximum number of pages to scrape and page is considered scraped if the action is performed successfuly (default: unlimited)
+    Maximum number of pages to scrape and page is considered scraped if the action is performed successfully (default: unlimited)
     
 -p, --preserve        
     Preserve whole URI (e.g. 'http://example.com/something/' instead of 'http://example.com/')
