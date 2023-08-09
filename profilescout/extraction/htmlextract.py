@@ -3,6 +3,7 @@ import re
 import json
 import string
 import difflib
+import urllib.parse
 
 from bs4 import BeautifulSoup
 from html2text import HTML2Text
@@ -175,6 +176,9 @@ def __process_links(match_md_link, resume_links, resume_emails, context):
                 link = link.replace('mailto:', '').strip()
                 resume_emails.append(link)
         else:
+            url_parts = urllib.parse.urlsplit(link)
+            encoded_query = urllib.parse.quote(url_parts.query, safe='=&')
+            link = urllib.parse.urlunsplit(url_parts._replace(query=encoded_query))
             # find key
             key = md_link[0].strip()
             if is_url(key):
