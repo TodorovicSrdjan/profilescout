@@ -205,6 +205,7 @@ def __process_links(match_md_link, resume_links, resume_emails, context):
         'found_something': found_something,
         'context': context}
 
+
 def _post_processing(resume, name_candidates):
     if 'Source URL' in resume:
         resume['url'] = resume.pop('Source URL')
@@ -252,6 +253,7 @@ def _post_processing(resume, name_candidates):
         resume['emails'] = list(dict.fromkeys(resume['emails']))
         resume['other'] = list(dict.fromkeys(resume['other']))
         return resume
+
 
 def _parse_differences(differences, country_code=None):
     '''returns resume information which is extracted from differences between pages'''

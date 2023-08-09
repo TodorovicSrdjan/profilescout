@@ -106,12 +106,10 @@ def to_fqdn(url):
 def to_base_url(url):
     # extract base url from given url
     base_url = to_fqdn(url)
-
     if 'https://' in url:
         base_url = 'https://' + base_url
     else:
         base_url = 'http://' + base_url
-
     return base_url + '/'
 
 

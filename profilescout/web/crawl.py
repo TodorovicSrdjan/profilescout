@@ -94,6 +94,7 @@ def crawl_website(
                     og_crawler.skip_sublinks = True
                 crawler.mark_as_visited(og_crawler.get_visited_links(), og_crawler.get_scraped_count())
 
+
 @dataclass
 class CrawlOptions:
     max_depth: int = 3
