@@ -305,7 +305,8 @@ def _parse_differences(differences, country_code=None):
                 # add the rest
                 resume['other'].append(difference)
                 name_candidates.append(difference)
-        resume['context'] += [context]
+        if context != difference:
+            resume['context'] += [context]
     final_resume = _post_processing(resume, name_candidates)
     return final_resume
 
