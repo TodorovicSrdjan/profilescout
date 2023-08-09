@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.3.0
+
+### Features
+- treat links with or w/o 'www' as the same
+- improve finding the most common fmt
+- exclude header/footer links in link extract
+- add support for flexible and custom crawl
+- add text property to WebElement
+- add source URL and text to extracted info
+
+### Fixes
+- exclude links without common subdomain
+- escape format regex pattern
+- make relevant words URL-safe
+- make extracted links URL-safe
+- don't add 'other' info to context
+
 ## v0.2.2
 
 ### Features
