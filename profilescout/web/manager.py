@@ -119,7 +119,11 @@ class CrawlManager:
         self.__previous_links = [hop.url for hop in hops]
 
         # transform extracted URLs, as some of them may be invalid or irrelevant
-        hops_with_abs_path = to_abs_path(hops, self.__base_url, self.curr_page.link.url)
+        hops_with_abs_path = [PageLink(
+                to_abs_path(pl.url, self.curr_page.link.url),
+                pl.depth,
+                pl.parent_url)
+            for pl in hops]
         valid = filter_out_invalid(hops_with_abs_path, self.__base_url)
         valid_not_visited = filter_out_visited(valid, self.__visited_links)
         new_links = filter_out_present_links(valid_not_visited, self.__links_to_visit)

@@ -66,31 +66,27 @@ def is_valid(url, base_url):
     return True
 
 
-def to_abs_path(page_links, base_url, current_link):
+def to_abs_path(url, current_url):
+    base_url = to_base_url(current_url)
     # fix relative links or links that start with '/'
-    abs_links = []
-    for pl in page_links:
-        link, depth, parent_url = pl.url, pl.depth, pl.parent_url
-        fixed_link = ''
-        if link.startswith('http'):
-            fixed_link = link
-        elif link.startswith('www'):
-            fixed_link = 'http://' + link
+    abs_url = url
+    if url.startswith('http'):
+        abs_url = url
+    elif url.startswith('www'):
+        abs_url = 'http://' + url
+    else:
+        # relative path or absoulte path from '/'
+        if url[0] == '/':
+            # absolute path
+            if base_url[-1] == '/':
+                url = url[1:]  # remove '/' since base_url ends with one
+            abs_url = base_url + url
         else:
-            # relative path or absoulte path from '/'
-            if link[0] == '/':
-                # absolute path
-                if base_url[-1] == '/':
-                    link = link[1:]  # remove '/' since base_url ends with one
-                fixed_link = base_url + link
-            else:
-                # relative path
-                if current_link[-1] != '/':
-                    link = '/' + link
-                fixed_link = current_link + link
-        abs_links += [PageLink(fixed_link, depth, parent_url)]
-
-    return abs_links
+            # relative path
+            if current_url[-1] != '/':
+                url = '/' + url
+            abs_url = current_url + url
+    return abs_url
 
 
 def to_key(url):
