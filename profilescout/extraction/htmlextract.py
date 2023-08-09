@@ -10,7 +10,7 @@ from html2text import HTML2Text
 from collections import defaultdict
 from phonenumbers import PhoneNumberMatcher, PhoneNumberFormat, format_number, parse
 
-from profilescout.link.utils import to_key, is_url
+from profilescout.link.utils import to_key, is_url, to_abs_path
 
 
 PATTERNS = {'unwanted_tag__has_placeholder': r'(<\/?(?:b|i|strong|em|blockquote|h[1-6])\b[^>]*>)',
@@ -191,7 +191,7 @@ def __process_links(match_md_link, resume_links, resume_emails, context):
                     key = 'images'
 
             if key == '':
-                key = 'profile'
+                key = 'profile_picture'
 
             # add new link
             if key not in resume_links:
@@ -205,6 +205,53 @@ def __process_links(match_md_link, resume_links, resume_emails, context):
         'found_something': found_something,
         'context': context}
 
+def _post_processing(resume, name_candidates):
+    if 'Source URL' in resume:
+        resume['url'] = resume.pop('Source URL')
+    # try to guess person's name
+    possible_name = guess_name(name_candidates, must_find=True)
+    if possible_name is not None:
+        name = possible_name
+        if 'Source text' in resume:
+            link_text = resume.pop('Source text')
+            name_ci = longest_common_substring(link_text, possible_name, case_sensitive=False)
+            name_parts = name_ci.split()
+            name = ' '.join([name_part.capitalize() for name_part in name_parts])
+        resume['name'] = name
+        # remove name instances from `other`
+        if possible_name in resume['other']:
+            resume['other'].remove(possible_name)
+        if possible_name.upper() in resume['other']:
+            resume['other'].remove(possible_name.upper())
+        # check if profile image link is missing
+        if 'profile_picture' not in resume['links']:
+            first, last = possible_name.lower().split()
+            if 'images' in resume['links']:
+                for img_link in resume['links']['images']:
+                    if 'images' in resume and (
+                        first.lower() in img_link.lower() or last.lower() in img_link.lower()
+                    ):
+                        resume['links']['profile_picture'] = img_link
+                        if isinstance(resume['links']['images'], str):
+                            del resume['links']['images']
+                        else:
+                            resume['links']['images'].remove(img_link)
+                        break
+        # convert relative links to abs
+        if 'url' in resume:
+            url = resume['url']
+            for key in ['this', 'images', 'profile_picture']:
+                if key in resume['links']:
+                    if key == 'profile_picture':
+                        print(resume['links'][key])
+                    if isinstance(resume['links'][key], str):
+                        resume['links'][key] = to_abs_path('/' + resume['links'][key], url)
+                    else:
+                        resume['links'][key] = [to_abs_path('/' + link, url) for link in resume['links'][key]]
+        # remove duplicates
+        resume['emails'] = list(dict.fromkeys(resume['emails']))
+        resume['other'] = list(dict.fromkeys(resume['other']))
+        return resume
 
 def _parse_differences(differences, country_code=None):
     '''returns resume information which is extracted from differences between pages'''
@@ -257,33 +304,8 @@ def _parse_differences(differences, country_code=None):
                 resume['other'].append(difference)
                 name_candidates.append(difference)
         resume['context'] += [context]
-    # try to guess person's name
-    possible_name = guess_name(name_candidates, must_find=True)
-    if possible_name is not None:
-        resume['name'] = possible_name
-        # remove name instances from `other`
-        if possible_name in resume['other']:
-            resume['other'].remove(possible_name)
-        if possible_name.upper() in resume['other']:
-            resume['other'].remove(possible_name.upper())
-        # check if profile image link is missing
-        if 'profile' not in resume['links']:
-            first, last = possible_name.lower().split()
-            if 'images' in resume['links']:
-                for img_link in resume['links']['images']:
-                    if 'images' in resume['links'] and (
-                        first.lower() in img_link.lower() or last.lower() in img_link.lower()
-                    ):
-                        resume['links']['profile'] = img_link
-                        if isinstance(resume['links']['images'], str):
-                            del resume['links']['images']
-                        else:
-                            resume['links']['images'].remove(img_link)
-                        break
-    # remove duplicates
-    resume['emails'] = list(dict.fromkeys(resume['emails']))
-    resume['other'] = list(dict.fromkeys(resume['other']))
-    return resume
+    final_resume = _post_processing(resume, name_candidates)
+    return final_resume
 
 
 def get_resume_info(base_page, page, country_code=None):
@@ -348,3 +370,26 @@ def get_resumes_from_dir(dir_path, export_path=None, export_method='json'):
     if export_path is not None:
         export_resumes(''.join(pretty_resumes), export_path, export_method)
     return pretty_resumes
+
+
+def longest_common_substring(str1, str2, case_sensitive=True):
+    m = len(str1)
+    n = len(str2)
+    if not case_sensitive:
+        str1 = str1.lower()
+        str2 = str2.lower()
+    # create a table to store the lengths of common substrings
+    table = [[0] * (n + 1) for _ in range(m + 1)]
+    # variables to keep track of the longest common substring
+    max_length = 0
+    end_index = 0
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if str1[i - 1] == str2[j - 1]:
+                table[i][j] = table[i - 1][j - 1] + 1
+                if table[i][j] > max_length:
+                    max_length = table[i][j]
+                    end_index = i
+    # extract the longest common substring
+    longest_substring = str1[end_index - max_length: end_index]
+    return longest_substring

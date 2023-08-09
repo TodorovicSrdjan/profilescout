@@ -122,7 +122,8 @@ class CrawlManager:
         hops_with_abs_path = [PageLink(
                 to_abs_path(pl.url, self.curr_page.link.url),
                 pl.depth,
-                pl.parent_url)
+                pl.parent_url,
+                pl.txt)
             for pl in hops]
         valid = filter_out_invalid(hops_with_abs_path, self.__base_url)
         valid_not_visited = filter_out_visited(valid, self.__visited_links)

@@ -63,7 +63,10 @@ class Webpage:
         return False
 
     def get_html(self):
-        return self.__web_driver.get_page_source()
+        html = self.__web_driver.get_page_source()
+        source_url_tag = f'<profilescout>Source URL:{self.link.url}</profilescout>'
+        source_txt_tag = f'<profilescout>Source text:{self.link.txt}</profilescout>\n'
+        return f'{source_url_tag}\n{source_txt_tag}\n{html}'
 
     def take_screenshot(self, width=constants.WIDTH, height=constants.HEIGHT):
         '''takes screenshot of current page and returns image as byte array'''
@@ -145,6 +148,7 @@ class Webpage:
             href = ''
             try:
                 href = a_tag.get_attribute('href').strip()
+                txt = a_tag.text
             except StaleElementReferenceException:
                 print(f'ERROR: One of the links to visit next, "{self.link.url}",',
                       'is skipped (reason: stale element)',
@@ -166,7 +170,7 @@ class Webpage:
 
                 if href not in urls and is_valid(href, base_url):
                     urls.append(href)
-                    page_link = PageLink(href, self.link.depth+1, self.link.url)
+                    page_link = PageLink(href, self.link.depth+1, self.link.url, txt)
                     if from_structure and page_link.url in previous_links:
                         continue
                     page_links += [page_link]

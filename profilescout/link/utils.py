@@ -19,6 +19,7 @@ class PageLink:
     url: str
     depth: int
     parent_url: str = None
+    txt: str = ''
 
 
 def is_url(s):
