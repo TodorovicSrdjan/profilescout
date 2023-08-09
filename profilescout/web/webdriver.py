@@ -72,6 +72,10 @@ class WebElement(WebElementWrapper):
     def find_elements_with_xpath(self, xpath):
         return [WebElement(el) for el in self.element.find_elements(By.XPATH, xpath)]
 
+    @property
+    def text(self):
+        return self.element.text
+
 
 class WebDriver(WebDriverWrapper):
     """Implementation of WebDriverWrapper that wraps WebDriver."""
