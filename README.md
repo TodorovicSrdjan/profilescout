@@ -3,6 +3,8 @@
 ![License](https://img.shields.io/github/license/todorovicsrdjan/profilescout)
 ![Last commit](https://img.shields.io/github/last-commit/todorovicsrdjan/profilescout/master)
 ![Repo size](https://img.shields.io/github/repo-size/todorovicsrdjan/profilescout)
+[![PyPI - Version](https://img.shields.io/pypi/v/profilescout.svg)](https://pypi.org/project/profilescout)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/profilescout.svg)](https://pypi.org/project/profilescout)
 
 **Table of Contents**
 * [About](#about)
@@ -12,6 +14,7 @@
   * [Profile related tasks](#profile-related-tasks)
   * [Information extraction](#information-extraction)
 * [Installation](#installation)
+  * [PyPI](#pypi)
   * [Source](#source)
     * [Host](#host)
     * [Docker container](#docker-container)
@@ -174,6 +177,12 @@ profilescout -D /data -ep ~/results
 
 
 # Installation
+
+## PyPi
+
+```Bash
+pip3 install profilescout
+```
 
 ## Source
 
