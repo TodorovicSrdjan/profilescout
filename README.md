@@ -66,7 +66,7 @@ Options:
 -ep EXPORT_PATH, --export-path EXPORT_PATH
     Path to destination directory for exporting
     
--ic {scooby,batman}, --image-classifier {scooby,batman}
+-ic {scooby}, --image-classifier {scooby}
     Image classifier to be used for identifying profile pages (default: scooby)
     
 -cs CRAWL_SLEEP, --crawl-sleep CRAWL_SLEEP
@@ -159,10 +159,10 @@ Find and screenshot profile, store it as 600x400 (`-r`) image and then wait (`-c
 python3 main.py -br -t `nproc` -f links.txt -a scrape_profiles -mp 1000 -d 3 -cs 30 -r 600x400
 ```
 
-Locate the origin page of profile pages (`-a locate_origin`) with classifier called `batman` (`-ic batman`).
+Locate the origin page of profile pages (`-a locate_origin`) with classifier called `scooby` (`-ic scooby`).
 Note that visited pages are lond so in can be used for something like scanning the website
 ```Bash
-python3 main.py -t `nproc` -f links.txt -a locate_origin -ic batman
+profilescout -t `nproc` -f links.txt -a locate_origin -ic scooby
 ```
 
 ## Information extraction
@@ -188,19 +188,11 @@ source /path/to/some/dir/bin/activate
 
 3. Install requirements
 ```Bash
-pip3 install -r requirements
+pip3 install -r requirements.txt
 ```
 
-4. Download models for classification (this is **required** step if you want to crawl with profile detection)
-```
-cd /path/to/some/dir
-mkdir classifiers
-wget https://huggingface.co/tsrdjan/scooby/resolve/main/scooby.h5
-```
-
-5. Explore
-```
-cd ..
+4. Explore
+```Bash
 python3 profilescout/main.py -h
 ```
 

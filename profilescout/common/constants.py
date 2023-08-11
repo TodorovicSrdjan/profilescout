@@ -54,9 +54,10 @@ class ConstantsNamespace:
     # Once this threshold is met, the URL is regarded as the parent page for all subsequent profile pages
     ORIGIN_PAGE_THRESHOLD = 3
 
+    DEMO_MODEL_URL = 'https://huggingface.co/tsrdjan/scooby/resolve/main/scooby.h5'
+
     IMAGE_CLASSIFIERS = [
-        'scooby',
-        'batman']
+        'scooby']
 
     # Max lenght of the filename. This is desired limit. If target filesystem does not support
     # this lenght then it's limit will be used as maximum lenght

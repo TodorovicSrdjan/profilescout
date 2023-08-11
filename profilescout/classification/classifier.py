@@ -10,11 +10,7 @@ from tensorflow.keras.models import load_model
 constants = ConstantsNamespace
 
 CLASSIFIERS_DIR = os.path.abspath(
-    os.path.join(__file__,
-                 os.pardir,
-                 os.pardir,
-                 os.pardir,
-                 'classifiers'))
+    os.path.join(__file__, os.pardir, 'classifiers'))
 
 
 class ImageClassifier:
@@ -37,15 +33,6 @@ class ImageClassifier:
         resized = tf.image.resize(image, [resize_height, resize_width])
         reshaped = tf.reshape(resized, (1, resize_height, resize_width, 1))
         normalized = tf.divide(reshaped, 255.0)
-
-        return normalized
-
-    def __preprocess_batman(self, image, resize_height=360, resize_width=480):
-        image = tf.image.rgb_to_grayscale(image)
-        resized = tf.image.resize(image, [resize_height, resize_width])
-        reshaped = tf.reshape(resized, (1, resize_height, resize_width, 1))
-        normalized = tf.divide(reshaped, 255.0)
-
         return normalized
 
     def predict(self, image, height, width, channels=3, verbose=0):
@@ -62,8 +49,6 @@ class ImageClassifier:
         preprocessed_image = tensor
         if 'scooby' in self.__classifier_name:
             preprocessed_image = self.__preprocess_scooby(tensor)
-        elif 'batman' in self.__classifier_name:
-            preprocessed_image = self.__preprocess_batman(tensor)
 
         is_profile_percetage = self.__model(preprocessed_image, training=False)
         if is_profile_percetage > constants.PREDICTION_THRESHOLD:

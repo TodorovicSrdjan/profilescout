@@ -1,3 +1,4 @@
+import requests
 import os
 import sys
 import textwrap
@@ -233,6 +234,8 @@ if __name__ == "__main__":
         default=f'{constants.WIDTH}x{constants.HEIGHT}')
 
     args = parser.parse_args()
+    print('WARN: Image classifier is still under development and default one is just predicting profile pages '
+          + 'for specific websites. If you want to use custom model ')
 
     if args.url is not None:
         if not (args.url.startswith('http://')
@@ -265,30 +268,48 @@ if __name__ == "__main__":
         print(f'INFO: Directory {args.export_path!r} already exists')
     except OSError as e:
         args.export_path = os.getcwd()
-        parser.error(f'''
+        print(f'''
             ERROR: Unable create directory at {args.export_path!r}
             (reason: {e.strerror if hasattr(e, "strerror") else "unknown"}).
             The current directory has been set as the export directory
             ''')
-        export_path = '.'
-
-    if args.directory is None:
+        args.export_path = '.'
+    if (
+        args.directory is None
+        and action_type in [WebpageActionType.SCRAPE_PROFILES, WebpageActionType.FIND_ORIGIN]
+    ):
         # check for classifier dir and file presence
-        try:
-            if not os.listdir(CLASSIFIERS_DIR):
-                h5_files = [file for file in os.listdir(CLASSIFIERS_DIR) if file.endswith('.h5')]
-
+        model_found = False
+        classifier_name = f'{args.image_classifier}.h5'
+        if not os.path.exists(CLASSIFIERS_DIR):
+            print(f'WARN: Directory {CLASSIFIERS_DIR!r} is not present')
+            os.makedirs(CLASSIFIERS_DIR, exist_ok=True)
+        else:
+            classifiers_dir_files = os.listdir(CLASSIFIERS_DIR)
+            if classifiers_dir_files:
+                h5_files = [file for file in classifiers_dir_files if file.endswith('.h5')]
                 if len(h5_files) == 0:
-                    parser.error(f'Directory {CLASSIFIERS_DIR!r} does not contain any .h5 files')
-                    sys.exit()
+                    print(f'WARN: Directory {CLASSIFIERS_DIR!r} does not contain any .h5 files')
+                elif classifier_name not in h5_files:
+                    print(f'WARN: Model {classifier_name!r} is not found at {CLASSIFIERS_DIR!r}')
+                else:
+                    model_found = True
 
-                if args.image_classifier not in h5_files:
-                    parser.error(f'Model \'{args.image_classifier}.h5\' is not found at {CLASSIFIERS_DIR!r}')
-                    sys.exit()
-        except FileNotFoundError:
-            parser.error(f'Directory {CLASSIFIERS_DIR!r} is not present')
-            sys.exit()
+        if not model_found:
+            ans = input(
+                'Classification feature of this program is just a demo which works only for profile pages '
+                'of faculties of University of Kragujevac.\n'
+                'Would you like to test it out? [Y/n]: ')
+            if ans.lower() == 'y':
+                url = constants.DEMO_MODEL_URL
+                response = requests.get(url)
+                response.raise_for_status()
 
+                with open(os.path.join(CLASSIFIERS_DIR, classifier_name), "wb") as file:
+                    file.write(response.content)
+            else:
+                parser.error('to use classification try to import the program as a package in your project, '
+                             + 'extend classifier interface and then implement your own classifier')
     try:
         main(
             url=args.url,
