@@ -65,20 +65,21 @@ def crawl_website(
     base_url,
     options,
     action_type,
-    scrape_option
+    scrape_option,
+    image_classifier
 ):
     detection_strategy = OriginPageDetectionStrategy()
     if action_type == WebpageActionType.SCRAPE_PAGES:
-        crawler = Crawler(options, None, export_path)
+        crawler = Crawler(options, export_path)
         for step in crawler.crawl(base_url):
             crawler.save(scrape_option)
     elif action_type == WebpageActionType.FIND_ORIGIN:
-        crawler = Crawler(options, detection_strategy, export_path)
+        crawler = Crawler(options, export_path, detection_strategy, image_classifier)
         for step in crawler.crawl(base_url):
             if detection_strategy.successful():
                 break
     elif action_type == WebpageActionType.SCRAPE_PROFILES:
-        crawler = Crawler(options, detection_strategy, export_path)
+        crawler = Crawler(options, export_path, detection_strategy, image_classifier)
         for step in crawler.crawl(base_url):
             if detection_strategy.successful():
                 result = detection_strategy.get_result()
@@ -105,7 +106,6 @@ class CrawlOptions:
     use_buffer: bool = False
     scraping: bool = True
     resolution: tuple = (constants.WIDTH, constants.HEIGHT)
-    classifier_name: object = None
 
     def increase(self, to_incr):
         for option, val in to_incr.items():
@@ -121,7 +121,16 @@ class CrawlOptions:
 
 
 class Crawler:
-    def __init__(self, options, detection_strategy, export_path, parent_out_file=None, parent_err_file=None, is_subcrawler=False):
+    def __init__(
+        self,
+        options,
+        export_path,
+        detection_strategy=None,
+        image_classifier=None,
+        parent_out_file=None,
+        parent_err_file=None,
+        is_subcrawler=False
+    ):
         self.skip_sublinks = False
         self.skip_first_page = False
         self.links_from_structure = False
@@ -131,6 +140,7 @@ class Crawler:
         self.sublink_filters = []
         self.detection_strategy = detection_strategy
         self.options = options
+        self.image_classifier = image_classifier
         self.is_subcrawler = is_subcrawler
         # prepare output files and directories
         self.export_path = export_path
@@ -183,7 +193,7 @@ class Crawler:
         time.sleep(self.options.crawl_sleep)
 
     def __perform_detection_strategy(self):
-        self.detection_strategy.analyse(self.curr_page, self.options.classifier_name, self.options.resolution)
+        self.detection_strategy.analyse(self.curr_page, self.image_classifier, self.options.resolution)
         result = self.detection_strategy.get_result()
         if result is not None:
             print(f"INFO: {result['message']}", file=self.__out_file)
@@ -257,7 +267,12 @@ class Crawler:
 
     def create_subcrawler(self):
         options = copy.copy(self.options)
-        return Crawler(options, None, self.export_path, self.__out_file, self.__err_file, True)
+        return Crawler(
+            options,
+            self.export_path,
+            parent_out_file=self.__out_file,
+            parent_err_file=self.__err_file,
+            is_subcrawler=True)
 
     def save(self, scrape_option):
         action = self.curr_page.scrape_page

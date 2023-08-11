@@ -25,8 +25,8 @@ class OriginPageDetectionStrategy(DetectionStrategy):
         self.result = None
         self.origin_candidates = dict()  # TODO determine whether or not this should be completely cleared
 
-    def analyse(self, curr_page, classifier_name, resolution):
-        action_result = curr_page.is_profile(classifier_name, *resolution)
+    def analyse(self, curr_page, classifier, resolution):
+        action_result = curr_page.is_profile(classifier, *resolution)
         profile_detected = action_result.val
         if action_result.successful and profile_detected:
             # assume that this is initial page

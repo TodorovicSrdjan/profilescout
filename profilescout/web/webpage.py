@@ -7,8 +7,8 @@ from io import BytesIO
 
 from profilescout.common.exceptions import WebDriverException, StaleElementReferenceException
 from profilescout.common.constants import ConstantsNamespace
+from profilescout.common.interfaces import ImageProfileClassifier
 from profilescout.link.utils import PageLink, is_valid, to_file_path
-from profilescout.classification.classifier import ImageClassifier
 
 
 constants = ConstantsNamespace
@@ -111,15 +111,23 @@ class Webpage:
 
         return ActionResult(successful, result)
 
-    def is_profile(self, classifier_name, width, height):
-        result = self.take_screenshot(width, height)
-
-        if not result.successful:
-            return ActionResult(False, 'Inference was not successfully performed')
-
-        img_bytes = result.val
-        img_classifier = ImageClassifier(classifier_name)
-        profile_detected = img_classifier.predict(img_bytes, height, width)
+    def is_profile(self, classifier, *args, **kwargs):
+        profile_detected = False
+        if isinstance(classifier, ImageProfileClassifier):
+            width, height = None, None
+            if 'width' in kwargs:
+                width = kwargs['width']
+            elif len(args) > 0:
+                width = args[0]
+            if 'height' in kwargs:
+                height = kwargs['height']
+            elif len(args) > 1:
+                height = args[1]
+            result = self.take_screenshot(width, height)
+            if not result.successful:
+                return ActionResult(False, 'Inference was not successfully performed')
+            img_bytes = result.val
+            profile_detected = classifier.predict(img_bytes, width, height, **kwargs)
 
         if profile_detected:
             print(f'INFO: Detected as profile page: {self.link.url}', file=self.__out_file)

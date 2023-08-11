@@ -11,7 +11,7 @@ from profilescout.common.constants import ConstantsNamespace
 from profilescout.link.utils import to_fqdn, to_base_url
 from profilescout.web.webpage import WebpageActionType, ScrapeOption
 from profilescout.web.crawl import CrawlOptions, crawl_website
-from profilescout.classification.classifier import CLASSIFIERS_DIR
+from profilescout.classification.classifier import CLASSIFIERS_DIR, ScoobyDemoClassifier
 from profilescout.extraction.htmlextract import get_resumes_from_dir
 
 
@@ -72,8 +72,7 @@ def generate_crawl_inputs(
             bump_relevant=bump_relevant,
             use_buffer=use_buffer,
             scraping=scraping,
-            resolution=resolution,
-            classifier_name=image_classifier)
+            resolution=resolution)
         if not peserve_uri:
             read_url = to_base_url(read_url)
         crawl_inputs += [(
@@ -81,7 +80,8 @@ def generate_crawl_inputs(
             read_url,
             crawl_options,
             action_type,
-            scrape_option)]
+            scrape_option,
+            image_classifier)]
     return crawl_inputs
 
 
@@ -276,6 +276,7 @@ def cli():
             The current directory has been set as the export directory
             ''')
         args.export_path = '.'
+    image_classifier = None
     if (
         args.directory is None
         and action_type in [WebpageActionType.SCRAPE_PROFILES, WebpageActionType.FIND_ORIGIN]
@@ -312,6 +313,8 @@ def cli():
             else:
                 parser.error('to use classification try to import the program as a package in your project, '
                              + 'extend classifier interface and then implement your own classifier')
+        else:
+            image_classifier = ScoobyDemoClassifier(os.path.join(CLASSIFIERS_DIR,  classifier_name))
     try:
         main(
             url=args.url,
@@ -329,7 +332,7 @@ def cli():
             action_type=action_type,
             scrape_option=scrape_option,
             resolution=args.resolution,
-            image_classifier=args.image_classifier)
+            image_classifier=image_classifier)
     except KeyboardInterrupt:
         print('\nINFO: Exited')
     else:
