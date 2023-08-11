@@ -8,7 +8,6 @@ from urllib.parse import urlparse, quote_plus
 from dataclasses import dataclass
 
 from profilescout.common.constants import ConstantsNamespace
-from profilescout.common.exceptions import LongFilenameException
 
 
 constants = ConstantsNamespace
@@ -203,7 +202,7 @@ def filter_out_long(page_links, err_file=sys.stderr):
     return not_too_long
 
 
-def to_filename(url, export_path, extension):
+def to_filename(url, export_path, extension, err_file=sys.stderr):
     filename = url
 
     # remove '/' at the end
@@ -221,23 +220,8 @@ def to_filename(url, export_path, extension):
     limit = os.pathconf(export_path, 'PC_NAME_MAX')
     limit = min(limit, constants.FILENAME_MAX_LENGHT)
     if len(filename) + len(extension) + 1 > limit:
-        raise LongFilenameException(filename, limit)
-    else:
-        filename += '.' + extension
-
-    return filename
-
-
-def url2file_path(link, export_path, extension, ignore_existing=False, err_file=sys.stderr):
-    filename = ''
-    try:
-        filename = to_filename(link, export_path, extension)
-    except LongFilenameException as lfe:
-        filename = lfe.args[0]
-
         # cut off chars that exceed limit
-        filename = filename[:lfe.limit]
-
+        filename = filename[:limit]
         # replace the remaining string with suffix and extension
         ext = '.' + extension
         suffix = constants.FILENAME_CUT_SUFFIX
@@ -247,6 +231,16 @@ def url2file_path(link, export_path, extension, ignore_existing=False, err_file=
         print('WARN: Link was too long.',
               f'The filename of has changed to: {filename}',
               file=err_file)
+    else:
+        filename += '.' + extension
+
+    return filename
+
+
+def url2file_path(link, export_path, extension, ignore_existing=False, err_file=sys.stderr):
+    filename = ''
+    
+    filename = to_filename(link, export_path, extension)
     path = os.path.join(export_path, filename)
     if not ignore_existing and os.path.exists(path):
         print(f'WARN: File already exists at: {path}', file=err_file)

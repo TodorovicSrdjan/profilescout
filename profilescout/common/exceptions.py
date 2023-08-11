@@ -23,12 +23,6 @@ def parse_web_driver_exception(e, url):
     return err_msg, reason
 
 
-class LongFilenameException(Exception):
-    def __init__(self, message, limit):
-        super().__init__(message)
-        self.limit = limit
-
-
 class WebDriverException(Exception):
     """Custom exception to abstract WebDriverException from users."""
 
