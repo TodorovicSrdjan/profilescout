@@ -15,7 +15,6 @@
   * [Source](#source)
     * [Host](#host)
     * [Docker container](#docker-container)
-    * [Used third-party packages](#used-third-party-packages)
 * [Possibilities for future improvements](#possibilities-for-future-improvements)
 * [Contributing](#contributing)
 
@@ -223,16 +222,6 @@ Add `--rm` if you want it to be disposable (one-time task)
 ```Bash
 profilescout -mp 4 -t 1 -ep '/data' -p --url https://en.wikipedia.org/wiki/GNU
 ```
-
-### Used third-party packages
-* `bs4`
-* `html2text`
-* `numpy`
-* `pillow`
-* `phonenumbers`
-* `selenium`
-* `tensorflow`
-* `tldextract` 
 
 # Possibilities for future improvements
 
