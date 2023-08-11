@@ -237,7 +237,7 @@ def cli():
 
     args = parser.parse_args()
     print('WARN: Image classifier is still under development and default one is just predicting profile pages '
-          + 'for specific websites. If you want to use custom model ')
+          + 'for specific websites. You need to train the model yourself if you want to use classification')
 
     if args.url is not None:
         if not (args.url.startswith('http://')
