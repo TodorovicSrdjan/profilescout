@@ -237,15 +237,13 @@ def to_filename(url, export_path, extension, err_file=sys.stderr):
     return filename
 
 
-def url2file_path(link, export_path, extension, ignore_existing=False, err_file=sys.stderr):
+def to_file_path(link, export_path, extension, ignore_existing=False, err_file=sys.stderr):
     filename = ''
-    
     filename = to_filename(link, export_path, extension)
     path = os.path.join(export_path, filename)
     if not ignore_existing and os.path.exists(path):
         print(f'WARN: File already exists at: {path}', file=err_file)
         return None
-
     return path
 
 

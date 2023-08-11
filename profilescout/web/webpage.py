@@ -7,7 +7,7 @@ from io import BytesIO
 
 from profilescout.common.exceptions import WebDriverException, StaleElementReferenceException
 from profilescout.common.constants import ConstantsNamespace
-from profilescout.link.utils import PageLink, is_valid, url2file_path
+from profilescout.link.utils import PageLink, is_valid, to_file_path
 from profilescout.classification.classifier import ImageClassifier
 
 
@@ -85,7 +85,7 @@ class Webpage:
 
         if scrape_option in [ScrapeOption.ALL, ScrapeOption.SCREENSHOT]:
             # take a screenshot of the entire web page and save it as an image file
-            path = url2file_path(
+            path = to_file_path(
                 self.link.url,
                 os.path.join(export_path, 'screenshots'),
                 constants.IMG_EXT,
@@ -97,7 +97,7 @@ class Webpage:
 
         if scrape_option in [ScrapeOption.ALL, ScrapeOption.HTML]:
             # save html as a file
-            path = url2file_path(
+            path = to_file_path(
                 self.link.url,
                 os.path.join(export_path, 'html'),
                 'html',
