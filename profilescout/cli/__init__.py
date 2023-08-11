@@ -5,6 +5,8 @@ import textwrap
 from concurrent.futures import ThreadPoolExecutor, wait
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# from profilescout.__about__ import __version__
 from profilescout.common.constants import ConstantsNamespace
 from profilescout.link.utils import to_fqdn, to_base_url
 from profilescout.web.webpage import WebpageActionType, ScrapeOption
@@ -113,7 +115,7 @@ def main(url, urls_file_path, export_path, directory,
         print('INFO: Threads have completed the crawling')
 
 
-if __name__ == "__main__":
+def cli():
     import argparse
 
     scrape_choices = [so.name.lower() for so in list(ScrapeOption)]

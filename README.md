@@ -11,10 +11,11 @@
   * [Scraping](#scraping)
   * [Profile related tasks](#profile-related-tasks)
   * [Information extraction](#information-extraction)
-* [Setup](#setup)
-  * [Host Setup](#host-setup)
-  * [Docker Setup](#docker-setup)
-  * [Used third-party packages](#used-third-party-packages)
+* [Installation](#installation)
+  * [Source](#source)
+    * [Host](#host)
+    * [Docker container](#docker-container)
+    * [Used third-party packages](#used-third-party-packages)
 * [Possibilities for future improvements](#possibilities-for-future-improvements)
 * [Contributing](#contributing)
 
@@ -124,24 +125,24 @@ Note: Order of arguments/switches doesn't matter
 Scrape the URL up to a depth of 2 (`-d`) or a maximum of 300 scraped pages (`-mp`), 
 depending on which comes first. Store scraped data at `/data` (`-ep`)
 ```Bash
-python3 main.py --url https://example.com -d 2 -mp 300 -ep /data
+profilescout --url https://example.com -d 2 -mp 300 -ep /data
 ```
 
 Scrape HTML (`-so html`) for every page up to a depth of 2 for the list of URLs (`-f`). 
 Number of threads to be used is set with `-t`
 ```Bash
-python3 main.py -ep /data -t `nproc` -f links.txt -d 2 -so html
+profilescout -ep /data -t `nproc` -f links.txt -d 2 -so html
 ```
 
 Start scraping screenshots from specific page (`-p`). It is import to note here that
 without `-p`, program would ignore full path, to be precise `/about-us/meet-the-team/` part
 ```Bash
-python3 main.py -p --url https://www.wowt.com/about-us/meet-the-team/ -mp 4 -so screenshot
+profilescout -p --url https://www.wowt.com/about-us/meet-the-team/ -mp 4 -so screenshot
 ```
 
 Scrape each website in the URLs list and postpone writing to the storge disk (by using buffer, `-b`)
 ```Bash
-python3 main.py -b -t `nproc` -f links.txt -d 0 -ep /data
+profilescout -b -t `nproc` -f links.txt -d 0 -ep /data
 ```
 
 ## Profile related tasks
@@ -151,12 +152,12 @@ For example, if we were searching for profile pages of professors we would like 
 contain related terms which could lead us to the profile page. Note: you can change it in file 
 [constants.py](./profilescout/common/constants.py#34)
 ```Bash
-python3 main.py -br -t `nproc` -f links.txt -a scrape_profiles -mp 30
+profilescout -br -t `nproc` -f links.txt -a scrape_profiles -mp 30
 ```
 
 Find and screenshot profile, store it as 600x400 (`-r`) image and then wait (`-cs`) 30 seconds before moving to the next profile
 ```Bash
-python3 main.py -br -t `nproc` -f links.txt -a scrape_profiles -mp 1000 -d 3 -cs 30 -r 600x400
+profilescout -br -t `nproc` -f links.txt -a scrape_profiles -mp 1000 -d 3 -cs 30 -r 600x400
 ```
 
 Locate the origin page of profile pages (`-a locate_origin`) with classifier called `scooby` (`-ic scooby`).
@@ -169,12 +170,15 @@ profilescout -t `nproc` -f links.txt -a locate_origin -ic scooby
 
 Extract information (`-D`) contained in profile HTMLs that are located at `/data` and store it at `~/results` (`-ep`)
 ```Bash
-python3 main.py -D /data -ep ~/results
+profilescout -D /data -ep ~/results
 ```
 
-# Setup
 
-## Host setup
+# Installation
+
+## Source
+
+### Host
 
 1. Create virtual environment (optional, but recommended)
 ```Bash
@@ -191,12 +195,17 @@ source /path/to/some/dir/bin/activate
 pip3 install -r requirements.txt
 ```
 
-4. Explore
+4. Install package locally
 ```Bash
-python3 profilescout/main.py -h
+pip3 install -e .
 ```
 
-## Docker setup
+5. Explore
+```Bash
+profilescout -h
+```
+
+### Docker container
 
 1. Create image and run container. Execute this in project's directory
 ```Bash
@@ -212,10 +221,10 @@ Add `--rm` if you want it to be disposable (one-time task)
 
 2. Test deployment (inside docker container)
 ```Bash
-python3 profilescout/main.py -mp 4 -t 1 -ep '/data' -p --url https://en.wikipedia.org/wiki/GNU
+profilescout -mp 4 -t 1 -ep '/data' -p --url https://en.wikipedia.org/wiki/GNU
 ```
 
-## Used third-party packages
+### Used third-party packages
 * `bs4`
 * `html2text`
 * `numpy`

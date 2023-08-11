@@ -21,9 +21,10 @@ ENV DISPLAY=:99
 
 COPY . .
 
-RUN pip install -r requirements.txt
-
 RUN mkdir classifiers 2>/dev/null \
     && wget -P classifiers https://huggingface.co/tsrdjan/scooby/resolve/main/scooby.h5
+
+RUN pip install -r requirements.txt \
+    && pip install -e .
 
 CMD ["bash"]

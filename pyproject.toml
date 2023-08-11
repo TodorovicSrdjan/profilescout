@@ -53,6 +53,9 @@ Documentation = "https://github.com/todorovicsrdjan/profilescout#readme"
 Issues = "https://github.com/todorovicsrdjan/profilescout/issues"
 Source = "https://github.com/todorovicsrdjan/profilescout"
 
+[project.scripts]
+profilescout = "profilescout.cli:cli"
+
 [tool.hatch.build]
 include = [
   "**/*.py"
