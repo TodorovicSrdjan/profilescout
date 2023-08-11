@@ -228,7 +228,7 @@ def to_filename(url, export_path, extension):
     return filename
 
 
-def url2file_path(link, export_path, extension, err_file=sys.stderr):
+def url2file_path(link, export_path, extension, ignore_existing=False, err_file=sys.stderr):
     filename = ''
     try:
         filename = to_filename(link, export_path, extension)
@@ -248,7 +248,7 @@ def url2file_path(link, export_path, extension, err_file=sys.stderr):
               f'The filename of has changed to: {filename}',
               file=err_file)
     path = os.path.join(export_path, filename)
-    if os.path.exists(path):
+    if not ignore_existing and os.path.exists(path):
         print(f'WARN: File already exists at: {path}', file=err_file)
         return None
 
