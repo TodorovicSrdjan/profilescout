@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# from profilescout.__about__ import __version__
+from profilescout.__about__ import __version__
 from profilescout.common.constants import ConstantsNamespace
 from profilescout.link.utils import to_fqdn, to_base_url
 from profilescout.web.webpage import WebpageActionType, ScrapeOption
@@ -157,6 +157,11 @@ def cli():
         '-D', '--directory',
         help="Extract data from HTML files in the directory. To avoid saving output, set '-ep'/'--export-path' to ''",
         dest='directory')
+    input_group.add_argument(
+        '-v', '--version',
+        help="print current version of the program",
+        dest='version',
+        action='store_const', const=True, default=False)
 
     parser.add_argument(
         '-a', '--action',
@@ -238,6 +243,10 @@ def cli():
     args = parser.parse_args()
     print('WARN: Image classifier is still under development and default one is just predicting profile pages '
           + 'for specific websites. You need to train the model yourself if you want to use classification')
+
+    if args.version:
+        print(__version__)
+        sys.exit()
 
     if args.url is not None:
         if not (args.url.startswith('http://')

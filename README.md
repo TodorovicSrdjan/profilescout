@@ -56,7 +56,10 @@ Options:
     
 -D DIRECTORY, --directory DIRECTORY
     Extract data from HTML files in the directory. To avoid saving output, set '-ep'/'--export-path' to ''
-    
+
+-v, --version
+    print current version of the program
+
 -a {scrape_pages,scrape_profiles,find_origin}, --action {scrape_pages,scrape_profiles,find_origin}
     Action to perform at a time of visiting the page (default: scrape_pages)
     
