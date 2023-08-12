@@ -33,29 +33,29 @@ class ActionResult:
 
 class Webpage:
     def __init__(self, web_driver, page_link, out_file, err_file):
-        self.__web_driver = web_driver
+        self._web_driver = web_driver
         self.link = page_link
-        self.__out_file = out_file
-        self.__err_file = err_file
+        self._out_file = out_file
+        self._err_file = err_file
 
     def visit(self):
         # navigate to the web page you want to capture
         try:
-            self.__web_driver.get(self.link.url)
+            self._web_driver.get(self.link.url)
         except WebDriverException:
             # if not successful, retry after RETRY_TIME seconds
             time.sleep(constants.RETRY_TIME)
 
             try:
-                self.__web_driver.get(self.link.url)
+                self._web_driver.get(self.link.url)
             except WebDriverException as e:
                 raise e  # TODO
 
         # pause videos that have autoplay set to true
         pause_ap_script = 'videos = document.querySelectorAll("video"); for(video of videos) {video.pause()}'
-        self.__web_driver.execute_script(pause_ap_script)
+        self._web_driver.execute_script(pause_ap_script)
 
-        content_type = self.__web_driver.execute_script("return document.contentType")
+        content_type = self._web_driver.execute_script("return document.contentType")
 
         if content_type.startswith('text'):
             return True
@@ -63,17 +63,17 @@ class Webpage:
         return False
 
     def get_html(self):
-        html = self.__web_driver.get_page_source()
+        html = self._web_driver.get_page_source()
         source_url_tag = f'<profilescout>Source URL:{self.link.url}</profilescout>'
         source_txt_tag = f'<profilescout>Source text:{self.link.txt}</profilescout>\n'
         return f'{source_url_tag}\n{source_txt_tag}\n{html}'
 
     def take_screenshot(self, width=constants.WIDTH, height=constants.HEIGHT):
         '''takes screenshot of current page and returns image as byte array'''
-        self.__web_driver.set_window_size(width, height)
+        self._web_driver.set_window_size(width, height)
 
         # take a screenshot of the entire web page and store it in buffer
-        screenshot_bytes = BytesIO(self.__web_driver.get_screenshot_as_png())  # TODO close
+        screenshot_bytes = BytesIO(self._web_driver.get_screenshot_as_png())  # TODO close
         image = Image.open(screenshot_bytes).convert("RGB")
 
         return ActionResult(True, image, 'Image is stored in a buffer')
@@ -81,7 +81,7 @@ class Webpage:
     def scrape_page(self, export_path, scrape_option, width=constants.WIDTH, height=constants.HEIGHT):
         successful = True
         result = {'html': None, 'screenshot': None}
-        self.__web_driver.set_window_size(width, height)
+        self._web_driver.set_window_size(width, height)
 
         if scrape_option in [ScrapeOption.ALL, ScrapeOption.SCREENSHOT]:
             # take a screenshot of the entire web page and save it as an image file
@@ -89,11 +89,11 @@ class Webpage:
                 self.link.url,
                 os.path.join(export_path, 'screenshots'),
                 constants.IMG_EXT,
-                self.__err_file)
+                self._err_file)
             if path is None:
                 return ActionResult(False, 'Failed to craft valid storing path for the screenshot')
             result['screenshot'] = path
-            successful = self.__web_driver.save_screenshot(path)
+            successful = self._web_driver.save_screenshot(path)
 
         if scrape_option in [ScrapeOption.ALL, ScrapeOption.HTML]:
             # save html as a file
@@ -101,7 +101,7 @@ class Webpage:
                 self.link.url,
                 os.path.join(export_path, 'html'),
                 'html',
-                self.__err_file)
+                self._err_file)
             if path is None:
                 return ActionResult(False, 'Failed to craft valid storing path for the html')
             result['html'] = path
@@ -130,7 +130,7 @@ class Webpage:
             profile_detected = classifier.predict(img_bytes, width, height, **kwargs)
 
         if profile_detected:
-            print(f'INFO: Detected as profile page: {self.link.url}', file=self.__out_file)
+            print(f'INFO: Detected as profile page: {self.link.url}', file=self._out_file)
 
         return ActionResult(True, profile_detected, 'Inference was successfully performed')
 
@@ -151,7 +151,7 @@ class Webpage:
                             and not(ancestor::div[contains(@role, 'nav')])
                             and not(ancestor::div[contains(@role, 'navigation')])
                         ]'''
-        a_tags = self.__web_driver.find_elements_with_xpath(xpath)
+        a_tags = self._web_driver.find_elements_with_xpath(xpath)
         for a_tag in a_tags:
             href = ''
             try:
@@ -160,11 +160,11 @@ class Webpage:
             except StaleElementReferenceException:
                 print(f'ERROR: One of the links to visit next, "{self.link.url}",',
                       'is skipped (reason: stale element)',
-                      file=self.__err_file)
+                      file=self._err_file)
             except WebDriverException as e:
                 print(f'ERROR: One of the links to visit next, "{self.link.url}",',
                       f'is skipped (reason: {str(e)})',
-                      file=self.__err_file)
+                      file=self._err_file)
             else:
                 idx = href.find('?nocache')
                 if idx != -1:

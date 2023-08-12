@@ -144,11 +144,11 @@ class Crawler:
         self.is_subcrawler = is_subcrawler
         # prepare output files and directories
         self.export_path = export_path
-        self.__out_file = sys.stdout
-        self.__err_file = sys.stderr
+        self._out_file = sys.stdout
+        self._err_file = sys.stderr
         if is_subcrawler:
-            self.__out_file = parent_out_file
-            self.__err_file = parent_err_file
+            self._out_file = parent_out_file
+            self._err_file = parent_err_file
         else:
             export_path_exists = True
             try:
@@ -161,10 +161,10 @@ class Crawler:
             if export_path_exists:
                 # open log files for writing if the directory is created
                 if self.options.use_buffer:
-                    self.__out_file = StringIO()
-                    self.__err_file = StringIO()
+                    self._out_file = StringIO()
+                    self._err_file = StringIO()
                 else:
-                    self.__out_file, self.__err_file = _create_out_and_err_files(self.export_path)
+                    self._out_file, self._err_file = _create_out_and_err_files(self.export_path)
             else:
                 self.export_path = '.'
             if self.options.scraping:
@@ -174,32 +174,32 @@ class Crawler:
                 except Exception:
                     pass
 
-    def __visit_page(self):
+    def _visit_page(self):
         if not self.crawl_manager.has_next():
             print(f'INFO: All links at a depth of {self.options.max_depth} have been visited.',
                   'Stopping the crawling...',
-                  file=self.__out_file)
+                  file=self._out_file)
             self.status = CrawlStatus.FINISHED
             return None
         self.curr_page = self.crawl_manager.visit_next()
         if self.curr_page is None:
             return None
-        print(f'{self.curr_page.link.depth} {self.curr_page.link.url}', file=self.__out_file, flush=True)
+        print(f'{self.curr_page.link.depth} {self.curr_page.link.url}', file=self._out_file, flush=True)
         return self.curr_page
 
-    def __visit_cleanup(self):
-        self.__out_file.flush()
-        self.__err_file.flush()
+    def _visit_cleanup(self):
+        self._out_file.flush()
+        self._err_file.flush()
         time.sleep(self.options.crawl_sleep)
 
-    def __perform_detection_strategy(self):
+    def _perform_detection_strategy(self):
         self.detection_strategy.analyse(self.curr_page, self.image_classifier, self.options.resolution)
         result = self.detection_strategy.get_result()
         if result is not None:
-            print(f"INFO: {result['message']}", file=self.__out_file)
+            print(f"INFO: {result['message']}", file=self._out_file)
         return result
 
-    def __perform_action(self, action, args):
+    def _perform_action(self, action, args):
         action_result = action(**args)
         if action_result.successful:
             self.crawl_manager.increase_count()
@@ -207,10 +207,10 @@ class Crawler:
                 self.status = CrawlStatus.FINISHED
         else:
             action_name = action.__name__
-            print(f'ERROR: Failed to perform action {action_name!r} for: {self.curr_page.link.url}', file=self.__err_file)
+            print(f'ERROR: Failed to perform action {action_name!r} for: {self.curr_page.link.url}', file=self._err_file)
         return action_result
 
-    def __queue_sublinks(self):
+    def _queue_sublinks(self):
         return self.crawl_manager.queue_sublinks(
             self.options.include_fragment,
             self.sublink_filters,
@@ -219,9 +219,9 @@ class Crawler:
     def crawl(self, base_url, base_depth=0):
         if not self.is_subcrawler:
             print(f'INFO: Logs for {base_url!r} are located at {self.export_path!r}')
-        self.__web_driver = setup_web_driver()
+        self._web_driver = setup_web_driver()
         self.status = CrawlStatus.RUNNING
-        self.crawl_manager = CrawlManager(self.__web_driver, base_url, self.__out_file, self.__err_file, base_depth=base_depth)
+        self.crawl_manager = CrawlManager(self._web_driver, base_url, self._out_file, self._err_file, base_depth=base_depth)
         self.crawl_manager.set_options(
             self.options.max_depth,
             self.options.max_pages,
@@ -229,18 +229,18 @@ class Crawler:
         try:
             while True:
                 self.skip_sublinks = False
-                current_page = self.__visit_page()
+                current_page = self._visit_page()
                 if current_page is None or self.status == CrawlStatus.FINISHED:
                     break
 
                 if self.detection_strategy is not None:
                     if self.detection_strategy.successful():
                         self.detection_strategy.reset()  # prep for new origin page
-                    self.__perform_detection_strategy()
+                    self._perform_detection_strategy()
 
                 if self.skip_first_page:
                     self.skip_first_page = False
-                    print(f'INFO: Skipped page: {self.curr_page.link.url}', file=self.__out_file)
+                    print(f'INFO: Skipped page: {self.curr_page.link.url}', file=self._out_file)
                 else:
                     yield current_page.link
 
@@ -251,16 +251,16 @@ class Crawler:
                     break
 
                 if not self.skip_sublinks:
-                    self.__queue_sublinks()
-                self.__visit_cleanup()
+                    self._queue_sublinks()
+                self._visit_cleanup()
         except RemoteDisconnected as rde:
-            print(f'INFO: Interrupted. Exiting... ({rde!r})', file=self.__err_file)
+            print(f'INFO: Interrupted. Exiting... ({rde!r})', file=self._err_file)
         except Exception as e:
             print(f'ERROR: {e!s}')
             print(f'{traceback.format_exc()}')
         finally:
             if not self.is_subcrawler:
-                _close_everything(self.__web_driver, self.__out_file, self.__err_file, self.export_path, self.options.use_buffer)
+                _close_everything(self._web_driver, self._out_file, self._err_file, self.export_path, self.options.use_buffer)
                 print(f'INFO: Crawling of {base_url!r} is complete')
             else:
                 print(f'INFO: Subcrawling of {base_url!r} is complete')
@@ -270,8 +270,8 @@ class Crawler:
         return Crawler(
             options,
             self.export_path,
-            parent_out_file=self.__out_file,
-            parent_err_file=self.__err_file,
+            parent_out_file=self._out_file,
+            parent_err_file=self._err_file,
             is_subcrawler=True)
 
     def save(self, scrape_option):
@@ -287,7 +287,7 @@ class Crawler:
                     'width': self.img_width, 'height': self.img_height}
         else:
             return None
-        return self.__perform_action(action, args)
+        return self._perform_action(action, args)
 
     def get_visited_links(self):
         return self.crawl_manager.get_visited_links()

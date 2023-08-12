@@ -164,7 +164,7 @@ def extract_phone_numbers(text, country_code):  # TODO fix for national nums, e.
     return number_info
 
 
-def __process_links(match_md_link, resume_links, resume_emails, context):
+def _process_links(match_md_link, resume_links, resume_emails, context):
     found_something = True
     for md_link in match_md_link:
         link = md_link[1].strip()
@@ -281,7 +281,7 @@ def _parse_differences(differences, country_code=None):
             found_something = True
         # add links to resume
         if match_md_link:
-            result = __process_links(match_md_link, resume['links'], resume['emails'], context)
+            result = _process_links(match_md_link, resume['links'], resume['emails'], context)
             context = result['context']
             found_something = result['found_something']
         # add emails to resume

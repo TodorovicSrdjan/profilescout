@@ -81,31 +81,31 @@ class WebDriver(WebDriverWrapper):
     """Implementation of WebDriverWrapper that wraps WebDriver."""
 
     def __init__(self, driver):
-        self.__driver = driver
+        self._driver = driver
 
     def get(self, url):
         try:
-            return self.__driver.get(url)
+            return self._driver.get(url)
         except SeleniumWebDriverException as e:
             raise WebDriverException.from_webdriver_exception(e)
 
     def get_screenshot_as_png(self):
-        return self.__driver.get_screenshot_as_png()
+        return self._driver.get_screenshot_as_png()
 
     def save_screenshot(self, path):
-        return self.__driver.save_screenshot(path)
+        return self._driver.save_screenshot(path)
 
     def get_page_source(self):
-        return self.__driver.page_source
+        return self._driver.page_source
 
     def find_elements_with_xpath(self, xpath):
-        return [WebElement(el) for el in self.__driver.find_elements(By.XPATH, xpath)]
+        return [WebElement(el) for el in self._driver.find_elements(By.XPATH, xpath)]
 
     def execute_script(self, script):
-        return self.__driver.execute_script(script)
+        return self._driver.execute_script(script)
 
     def set_window_size(self, width, height):
-        return self.__driver.set_window_size(width, height)
+        return self._driver.set_window_size(width, height)
 
     def quit(self):
-        self.__driver.quit()
+        self._driver.quit()

@@ -14,14 +14,14 @@ CLASSIFIERS_DIR = os.path.abspath(
 
 class ScoobyDemoClassifier(ImageProfileClassifier):
     def __init__(self, path):
-        self.__model = None
-        self.__path = path
-        self.__load_model(path)
+        self._model = None
+        self._path = path
+        self._load_model(path)
 
-    def __load_model(self, path):
-        if self.__model is None:
-            self.__model = load_model(path)
-        return self.__model
+    def _load_model(self, path):
+        if self._model is None:
+            self._model = load_model(path)
+        return self._model
 
     def preprocess(self, image, resize_width=360, resize_height=480):
         image = tf.image.rgb_to_grayscale(image)
@@ -38,7 +38,7 @@ class ScoobyDemoClassifier(ImageProfileClassifier):
 
         tensor = tf.convert_to_tensor(array, dtype=tf.uint8)
         preprocessed_image = self.preprocess(tensor)
-        is_profile_percetage = self.__model(preprocessed_image, training=False)
+        is_profile_percetage = self._model(preprocessed_image, training=False)
 
         if is_profile_percetage.shape == (1, 2):
             is_profile_percetage = is_profile_percetage[0][1]
