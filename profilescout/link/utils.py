@@ -48,8 +48,8 @@ def is_valid(url, base_url):
 
     base_extract = tldextract.extract(base_url)
     link_extract = tldextract.extract(url)
-    base_subdo_reversed = base_extract.subdomain.split('.')[::-1]
-    link_subdo_reversed = link_extract.subdomain.split('.')[::-1]
+    base_subdo_reversed = base_extract.subdomain.replace('www', '').split('.')[::-1]
+    link_subdo_reversed = link_extract.subdomain.replace('www', '').split('.')[::-1]
     common_len = min(len(base_subdo_reversed), len(link_subdo_reversed))
     # TODO rethink; could cause problem with some sites that have profiles
     # on another url or as PDF/DOCX/...
