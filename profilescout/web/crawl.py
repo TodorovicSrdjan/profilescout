@@ -280,8 +280,8 @@ class Crawler:
             args = {'export_path': self.export_path, 'scrape_option': ScrapeOption.ALL,
                     'width': self.img_width, 'height': self.img_height}
         elif scrape_option == ScrapeOption.HTML:
-            action = self.curr_page.get_html
-            args = {}
+            args = {'export_path': self.export_path, 'scrape_option': ScrapeOption.HTML,
+                    'width': self.img_width, 'height': self.img_height}
         elif scrape_option == ScrapeOption.SCREENSHOT:
             args = {'export_path': self.export_path, 'scrape_option': ScrapeOption.SCREENSHOT,
                     'width': self.img_width, 'height': self.img_height}
