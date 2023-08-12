@@ -1,4 +1,5 @@
 import pytest
+from unittest import mock
 
 from context import profilescout
 from profilescout.link.utils import (
@@ -50,6 +51,11 @@ def links_to_visit():
         Link('http://example.com/link2'),
         Link('http://example.com/link4')
     ]
+
+
+@pytest.fixture
+def mocker():
+    return mock.Mock()
 
 
 class TestMostCommonFormat:
@@ -216,11 +222,12 @@ class TestFilterOutVisited:
 class TestFilterOutInvalid:
     def test_filter_out_invalid(self, page_links, mocker):
         def mock_is_valid(url, base_url):
-            return url in [page_links[1].url, page_links[2].url, page_links[3].url, page_links[5].url]
+            return url in [page_links[0].url, page_links[1].url, page_links[2].url, page_links[3].url]
 
-        mocker.patch('profilescout.link.utils.is_valid', side_effect=mock_is_valid)
+        mocker.patch('profilescout.link.utils.is_valid', mock_is_valid)
         base_url = 'https://example.com'
         expected_result = [
+            page_links[0],  # https://example.com/link1
             page_links[1],  # http://www.example.com/link2
             page_links[2],  # https://www.example.com/link3
             page_links[3],  # http://example.com/link4
