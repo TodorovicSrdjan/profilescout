@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.2
+
+### Features
+- add param for ignoring file presence url2fp
+- create abstraction over classifiers
+
+### Fixes
+- remove LongFilenameException
+- issues with missing classifier
+- make 'www' irrelevant for url validation
+
 ## v0.3.0
 
 ### Features
