@@ -256,8 +256,8 @@ class Crawler:
         except RemoteDisconnected as rde:
             print(f'INFO: Interrupted. Exiting... ({rde!r})', file=self._err_file)
         except Exception as e:
-            print(f'ERROR: {e!s}')
-            print(f'{traceback.format_exc()}')
+            print(f'ERROR: {e!s}', file=self._err_file)
+            print(f'{traceback.format_exc()}', file=self._err_file)
         finally:
             if not self.is_subcrawler:
                 _close_everything(self._web_driver, self._out_file, self._err_file, self.export_path, self.options.use_buffer)
