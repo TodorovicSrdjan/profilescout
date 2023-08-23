@@ -14,7 +14,7 @@ from profilescout.link.utils import to_key, is_url, to_abs_path
 
 
 PATTERNS = {'unwanted_tag__has_placeholder': r'(<\/?(?:b|i|strong|em|blockquote|h[1-6])\b[^>]*>)',
-            'md_link': r'\[(.*?)\]\((.+?)\)',
+            'md_link': r'(!?)\[([^\[\]]*?)\]\((.+?)\)',
             'email': r'(?:[a-z0-9_\.\+-]+)@(?:[\da-z\.-]+)\.(?:[a-z\.]{2,6})',
             'different_line': r'^\+*([^+]*\w+.*)$',
             'label_field': r'^\w.*:$',
@@ -164,43 +164,50 @@ def extract_phone_numbers(text, country_code):  # TODO fix for national nums, e.
     return number_info
 
 
-def _process_links(match_md_link, resume_links, resume_emails, context):
-    found_something = True
+def _process_links(difference, resume_links, resume_emails, context, nested=False):
+    match_md_link = re.findall(PATTERNS['md_link'], difference)
+    found_something = bool(match_md_link)
+    replacement = 'LINK'
     for md_link in match_md_link:
-        link = md_link[1].strip()
-        if 'mailto:' in link:
-            if link in resume_emails:
-                found_something = False
-            else:
-                context = _update_context(context, f'[{md_link[0]}]({md_link[1]})', 'EMAIL')
-                link = link.replace('mailto:', '').strip()
+        link = md_link[2].strip()
+        if 'mailto:' in link and link not in resume_emails:
+            context = _update_context(context, f'[{md_link[1]}]({md_link[2]})', 'EMAIL')
+            link = link.replace('mailto:', '').strip()
+            if link not in resume_emails:
                 resume_emails.append(link)
         else:
             url_parts = urllib.parse.urlsplit(link)
             encoded_query = urllib.parse.quote(url_parts.query, safe='=&')
             link = urllib.parse.urlunsplit(url_parts._replace(query=encoded_query))
             # find key
-            key = md_link[0].strip()
+            key = md_link[1].strip()
             if is_url(key):
                 key = to_key(link)
             # check if it is relative link
             elif re.search(r'^[^(www)|(http)].+?\..+(/.+)*$', link.lower()):
                 key = 'this'
-                # check if it is relative link to an image
-                if re.search(r'^(images?/)?.*?\.(jpg|jpeg|png|svg|webp|gif|bmp|ppm)$', link.lower()):
-                    key = 'images'
-
-            if key == '':
-                key = 'profile_picture'
-
+            # check if it is link to an image
+            if (
+                re.search(r'^(images?/)?.*?\.(jpg|jpeg|png|svg|webp|gif|bmp|ppm)$', link.lower())
+                or re.search(r'^data:image/.*$', link.lower())
+            ):
+                key = 'images'
+            if nested:
+                key = key.replace(replacement, '')
+                replacement = 'NESTED_LINKS'
             # add new link
             if key not in resume_links:
                 resume_links[key] = link
             elif isinstance(resume_links[key], str):
                 resume_links[key] = [link, resume_links[key]]
-            else:
+            elif link not in resume_links[key]:
                 resume_links[key].append(link)
-            context = _update_context(context, f'[{md_link[0]}]({md_link[1]})', 'LINK')
+
+            context = _update_context(context, f'{md_link[0]}[{md_link[1]}]({md_link[2]})', replacement)
+            subresult = _process_links(context, resume_links, resume_emails, context, nested=True)
+            if subresult['found_something']:
+                context = subresult['context']
+    
     return {
         'found_something': found_something,
         'context': context}
@@ -209,6 +216,7 @@ def _process_links(match_md_link, resume_links, resume_emails, context):
 def _post_processing(resume, name_candidates):
     if 'Source URL' in resume:
         resume['url'] = resume.pop('Source URL')
+        name_candidates += resume['url']
     # try to guess person's name
     possible_name = guess_name(name_candidates, must_find=True)
     if possible_name is not None:
@@ -224,20 +232,19 @@ def _post_processing(resume, name_candidates):
             resume['other'].remove(possible_name)
         if possible_name.upper() in resume['other']:
             resume['other'].remove(possible_name.upper())
-        # check if profile image link is missing
-        if 'profile_picture' not in resume['links']:
-            first, last = possible_name.lower().split()
-            if 'images' in resume['links']:
-                for img_link in resume['links']['images']:
-                    if 'images' in resume and (
-                        first.lower() in img_link.lower() or last.lower() in img_link.lower()
-                    ):
-                        resume['links']['profile_picture'] = img_link
-                        if isinstance(resume['links']['images'], str):
-                            del resume['links']['images']
-                        else:
-                            resume['links']['images'].remove(img_link)
-                        break
+        # find and add profile page
+        first, last = possible_name.lower().split()
+        if 'images' in resume['links']:
+            for img_link in resume['links']['images']:
+                if 'images' in resume and (
+                    first.lower() in img_link.lower() or last.lower() in img_link.lower()
+                ):
+                    resume['links']['profile_picture'] = img_link
+                    if isinstance(resume['links']['images'], str):
+                        del resume['links']['images']
+                    else:
+                        resume['links']['images'].remove(img_link)
+                    break
         # convert relative links to abs
         if 'url' in resume:
             url = resume['url']
@@ -267,7 +274,6 @@ def _parse_differences(differences, country_code=None):
     name_candidates = []
     for difference in differences:
         match_email = re.findall(PATTERNS['email'], difference)
-        match_md_link = re.findall(PATTERNS['md_link'], difference)
         match_label_field = re.search(PATTERNS['label_field'], difference)
         match_label_field_with_value = re.search(PATTERNS['label_field_with_value'], difference)
 
@@ -280,8 +286,9 @@ def _parse_differences(differences, country_code=None):
             context = number_info['context']
             found_something = True
         # add links to resume
-        if match_md_link:
-            result = _process_links(match_md_link, resume['links'], resume['emails'], context)
+        result = _process_links(difference, resume['links'], resume['emails'], context)
+        found_links = len(result) != 0
+        if found_links:
             context = result['context']
             found_something = result['found_something']
         # add emails to resume
@@ -289,7 +296,8 @@ def _parse_differences(differences, country_code=None):
         if match_email:
             found_something = True
             for email in match_email:
-                resume['emails'].append(email)
+                if email not in resume['emails']:
+                    resume['emails'].append(email)
                 name_candidates.append(email)
                 context = _update_context(context, email, 'EMAIL')
         # add anything else to resume
@@ -303,7 +311,8 @@ def _parse_differences(differences, country_code=None):
                 context = _update_context(context, value, 'FIELD_VAL')
             elif not match_label_field:
                 # add the rest
-                resume['other'].append(difference)
+                if difference not in resume['other']:
+                    resume['other'].append(difference)
                 name_candidates.append(difference)
         if context != difference:
             resume['context'] += [context]
