@@ -264,8 +264,6 @@ def _post_processing(resume, name_candidates):
             url = resume['url']
             for key in ['this', 'images', 'profile_picture']:
                 if key in resume['links']:
-                    if key == 'profile_picture':
-                        print(resume['links'][key])
                     if isinstance(resume['links'][key], str):
                         resume['links'][key] = to_abs_path(resume['links'][key], url)
                     else:
