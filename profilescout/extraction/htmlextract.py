@@ -355,7 +355,7 @@ def get_resumes(pages, country_code=None):
     # if country_code is not set, try to infer it from html
     if country_code is None:
         country_code = base_page.html.get('lang')
-        country_code = country_code.split('-')[0].upper() if country_code is not None else None
+        country_code = country_code.split('-')[-1].upper() if country_code is not None else None
 
     # charset = base_page.meta.get('charset')
 
