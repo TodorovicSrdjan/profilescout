@@ -9,6 +9,7 @@
 **Table of Contents**
 * [About](#about)
 * [Capabilities](#capabilities)
+* [Usage](#usage)
 * [Common Use Cases](#common-use-cases)
   * [Scraping](#scraping)
   * [Profile related tasks](#profile-related-tasks)
@@ -119,6 +120,71 @@ the crawling process.
 RELEVANT_WORDS=['profile', 'user', 'users', 'about-us', 'team', 'employees', 'staff', 'professor', 
                 'profil', 'o-nama', 'zaposlen', 'nastavnik', 'nastavnici', 'saradnici', 'profesor', 'osoblje', 
                 'запослен', 'наставник', 'наставници', 'сарадници', 'професор', 'особље']
+```
+
+# Usage
+
+The program can be used from:
+1. command line tool `profilescout` or 
+2. from another program as a package `profilescout`
+
+Command line example:
+```Bash
+$ profilescout -a scrape_pages --url 'http://example.com'
+```
+
+Package example (simple):
+```Python
+from profilescout.crawl import Crawler
+from profilescout.web.webpage import ScrapeOption
+
+base_url = 'http://example.com'
+crawl_options = CrawlOptions(max_depth=2, max_pages=20)
+crawler = Crawler(options, '.')
+scrape_option = ScrapeOption.ALL
+
+for step in crawler.crawl(base_url):
+    crawler.save(scrape_option)
+```
+
+Package example (advance):
+```Python
+from profilescout.common.structures import OriginPageDetectionStrategy
+from profilescout.crawl import Crawler
+from profilescout.link.utils import is_valid_sublink
+from profilescout.web.webpage import ScrapeOption
+
+# Default values for `CrawlOptions` are provided below as an example.
+# If the value of a parameter is not set, these default values will be used instead
+crawl_options = CrawlOptions(
+            max_depth=3,
+            max_pages=None,  # there is no limit to the number of scraped pages
+            crawl_sleep=2,
+            include_fragment=False,
+            bump_relevant=True,
+            use_buffer=False,
+            scraping=True,
+            resolution=(2880, 1620))
+base_url = 'http://example.com'
+export_path '.'
+detection_strategy = OriginPageDetectionStrategy()
+crawler = Crawler(options, export_path, detection_strategy, image_classifier)
+scrape_option = ScrapeOption.ALL
+
+for step in crawler.crawl(base_url):
+    if detection_strategy.successful():
+        result = detection_strategy.get_result()
+        origin = result['origin']
+        og_crawler = crawler.create_subcrawler()
+        og_crawler.options.max_depth = result['depth'] + 1
+        og_crawler.links_from_structure = True
+        og_crawler.skip_sublinks = True
+        og_crawler.skip_first_page = True
+        og_crawler.sublink_filters = [lambda page_link: is_valid_sublink(page_link.url, result['most_common_format'], '####')]
+        for og_step in og_crawler.crawl(origin, result['depth']):
+            og_crawler.save(scrape_option)
+            og_crawler.skip_sublinks = True
+        crawler.mark_as_visited(og_crawler.get_visited_links(), og_crawler.get_scraped_count())
 ```
 
 # Common Use Cases
