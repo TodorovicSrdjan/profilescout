@@ -91,10 +91,11 @@ def to_abs_path(url, current_url):
 
 def to_key(url):
     result = tldextract.extract(url)
-    if result.subdomain in ['', 'www']:
+    subdomain = result.subdomain
+    if subdomain in ['', 'www']:
         return result.domain
-    if 'www' in result.subdomain:
-        subdomain = result.subdomain.replace('www.', '')
+    if 'www' in subdomain:
+        subdomain = subdomain.replace('www.', '')
     return f'{result.domain}-{subdomain}'
 
 
