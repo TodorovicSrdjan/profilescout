@@ -7,11 +7,12 @@ import urllib.parse
 
 from bs4 import BeautifulSoup
 from html2text import HTML2Text
-from collections import defaultdict
+from collections import Counter
 from phonenumbers import PhoneNumberMatcher, PhoneNumberFormat, format_number, parse
 
-from profilescout.common.texthelpers import longest_common_substring
+from profilescout.common.texthelpers import longest_common_substring, dl_distance
 from profilescout.link.utils import to_key, is_url, to_abs_path
+from profilescout.extraction.ner import NamedEntityRecognition
 
 
 PATTERNS = {'unwanted_tag__has_placeholder': r'(<\/?(?:b|i|strong|em|blockquote|h[1-6])\b[^>]*>)',
@@ -26,6 +27,9 @@ PATTERNS = {'unwanted_tag__has_placeholder': r'(<\/?(?:b|i|strong|em|blockquote|
                                     + r'((?:\(?\d{1,}\)?[\-\.\ \\\/]?){0,}'
                                     + r'(?:#|ext\.?|extension|x)?[\-\.\ \\\/]?\d+)?)'
             }
+
+
+ner = NamedEntityRecognition()
 
 
 def _get_differences(different_lines):
@@ -69,52 +73,46 @@ def _extract_differences(base_page, other_page):
     return _get_differences(different_lines)
 
 
-def guess_name(parts, threshold=2, must_find=False):
-    '''Guess person's name based on frequency of words
+def _rank_name_candidate(candidate):
+    parts = candidate.split()
+    lenght = len(parts)
+    if lenght in [2, 3, 4]:
+        return 0
+    if lenght == 1:
+        return 1
+    return 2
 
-    Parameter threshold represents number of occurences of 2 words
-    after which they will be considered as first and last name.
+
+def guess_name(ner, txt, origin_link_text):
+    '''Guess person's name using NER and text of the link that leads to this HTML page
     '''
-    parts_flat = [part for part in parts if isinstance(part, str)]
-    for part in parts:
-        if isinstance(part, dict):
-            parts_flat.extend(*part.items())
+    names = ner.get_names(txt)
+    link_txt = origin_link_text.strip() if origin_link_text is not None and origin_link_text != '' else None
 
-    # preprocess data
-    words = []
-    for part in parts_flat:
-        splitted = re.split(PATTERNS['repetetive_punct'], part)
-        words += [word for word in splitted if word != '']
+    if names is None or len(names) == 0:
+        return link_txt
 
-    # create a dictionary to count word pairs
-    word_pair_original = dict()
-    word_pair_counts = defaultdict(int)
-    for i in range(len(words) - 1):
-        if words[i] == '' or words[i+1] == '':
-            continue
-        word_pair = (words[i].lower(), words[i+1].lower())
-        word_pair_original[word_pair] = (words[i], words[i+1])
-        word_pair_counts[word_pair] += 1
+    norm_names = []
+    for name in names:
+        match = re.search(r'(?:\w{1,4}\.?\ )?(\w+?)(?:(?:\ \w{1,4}\.?)|(?:,\ \w+?,)|(?:\ \(\ ?\w+?\ ?\)))?\ ([\w\ -]+)', name)
+        if match:
+            norm_names.append(f'{match.group(1)} {match.group(2)}')
+        else:
+            norm_names.append(name)
 
-    # sort the dictionary by counts in descending order
-    sorted_word_pairs = sorted(
-        word_pair_counts.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )
-
-    # filter and return first and last name word pairs
-    for word_pair, count in sorted_word_pairs:
-        og_first_name = word_pair_original[word_pair][0]
-        og_last_name = word_pair_original[word_pair][1]
-        if og_first_name[0].isupper() and og_last_name[0].isupper():
-            if count >= threshold:
-                return ' '.join(word_pair).title()
-    if not must_find or len(sorted_word_pairs) == 0:
-        return None
-    # choose most occuring pair as person's name
-    full_name = sorted_word_pairs[0][0]
-    return f'{full_name[0]} {full_name[1]}'.title()
+    name_counts = Counter(norm_names).items()
+    names_sorted = None
+    if link_txt is None:
+        names_sorted = sorted(name_counts, key=lambda x: (_rank_name_candidate(x[0]), -x[1]))
+        name = names_sorted[0][0]
+    else:
+        names_sorted = sorted(name_counts, key=lambda x: (
+            _rank_name_candidate(x[0]),
+            -x[1],
+            dl_distance(link_txt.lower(), x[0].lower()))
+        )
+        name = longest_common_substring(names_sorted[0][0], link_txt, case_sensitive=False)
+    return name.title()
 
 
 def _update_context(context, extracted_info, replacement):
@@ -208,31 +206,27 @@ def _process_links(difference, resume_links, resume_emails, context, nested=Fals
             subresult = _process_links(context, resume_links, resume_emails, context, nested=True)
             if subresult['found_something']:
                 context = subresult['context']
-    
+
     return {
         'found_something': found_something,
         'context': context}
 
 
-def _post_processing(resume, name_candidates):
+def _post_processing(resume):
     if 'Source URL' in resume:
         resume['url'] = resume.pop('Source URL')
-        name_candidates += resume['url']
+    link_text = ''
+    if 'Source text' in resume:
+        link_text = resume.pop('Source text')
     # try to guess person's name
-    possible_name = guess_name(name_candidates, must_find=True)
-    if possible_name is not None:
-        name = possible_name
-        if 'Source text' in resume:
-            link_text = resume.pop('Source text')
-            name_ci = longest_common_substring(link_text, possible_name, case_sensitive=False)
-            name_parts = name_ci.split()
-            name = ' '.join([name_part.capitalize() for name_part in name_parts])
+    name = guess_name(ner, '\n'.join(resume['other']), link_text)
+    if name is not None:
         resume['name'] = name
         # remove name instances from `other`
-        if possible_name in resume['other']:
-            resume['other'].remove(possible_name)
-        if possible_name.upper() in resume['other']:
-            resume['other'].remove(possible_name.upper())
+        if name in resume['other']:
+            resume['other'].remove(name)
+        if name.upper() in resume['other']:
+            resume['other'].remove(name.upper())
         # find and add profile page
         email_user_parts = [email.split('@')[0] for email in resume['emails']]
         email_parts = [
@@ -243,7 +237,7 @@ def _post_processing(resume, name_candidates):
             ] if parts
             for part in parts
         ]
-        name_parts = possible_name.lower().split() + email_parts
+        name_parts = name.lower().split() + email_parts
         if 'images' in resume['links']:
             img_links = resume['links']['images']
             if isinstance(resume['links']['images'], str):
@@ -283,7 +277,6 @@ def _parse_differences(differences, country_code=None):
         'other': [],
         'phone_numbers': []
         }
-    name_candidates = []
     for difference in differences:
         match_email = re.findall(PATTERNS['email'], difference)
         match_label_field = re.search(PATTERNS['label_field'], difference)
@@ -310,7 +303,6 @@ def _parse_differences(differences, country_code=None):
             for email in match_email:
                 if email not in resume['emails']:
                     resume['emails'].append(email)
-                name_candidates.append(email)
                 context = _update_context(context, email, 'EMAIL')
         # add anything else to resume
         if not found_something:
@@ -325,10 +317,9 @@ def _parse_differences(differences, country_code=None):
                 # add the rest
                 if difference not in resume['other']:
                     resume['other'].append(difference)
-                name_candidates.append(difference)
         if context != difference:
             resume['context'] += [context]
-    final_resume = _post_processing(resume, name_candidates)
+    final_resume = _post_processing(resume)
     return final_resume
 
 

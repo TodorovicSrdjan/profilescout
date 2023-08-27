@@ -59,6 +59,8 @@ class ConstantsNamespace:
     IMAGE_CLASSIFIERS = [
         'scooby']
 
+    NER_MODEL = 'Davlan/bert-base-multilingual-cased-ner-hrl'
+
     # Max lenght of the filename. This is desired limit. If target filesystem does not support
     # this lenght then it's limit will be used as maximum lenght
     # Note: Kaggle has limit of 99 characters for filename
