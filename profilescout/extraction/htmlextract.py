@@ -234,18 +234,31 @@ def _post_processing(resume, name_candidates):
         if possible_name.upper() in resume['other']:
             resume['other'].remove(possible_name.upper())
         # find and add profile page
-        first, last = possible_name.lower().split()
+        email_user_parts = [email.split('@')[0] for email in resume['emails']]
+        email_parts = [
+            part
+            for parts in [
+                re.split(r'[' + re.escape(string.punctuation) + ']', user_part)
+                for user_part in email_user_parts
+            ] if parts
+            for part in parts
+        ]
+        name_parts = possible_name.lower().split() + email_parts
         if 'images' in resume['links']:
-            for img_link in resume['links']['images']:
-                if 'images' in resume and (
-                    first.lower() in img_link.lower() or last.lower() in img_link.lower()
-                ):
-                    resume['links']['profile_picture'] = img_link
-                    if isinstance(resume['links']['images'], str):
-                        del resume['links']['images']
-                    else:
-                        resume['links']['images'].remove(img_link)
-                    break
+            img_links = resume['links']['images']
+            if isinstance(resume['links']['images'], str):
+                img_links = [resume['links']['images']]
+            for img_link in img_links:
+                img_link_lwr = img_link.lower()
+                img_link_clean = ''.join(re.split(r'[' + re.escape(string.punctuation) + ']', img_link_lwr))
+                for name_part in name_parts:
+                    if name_part in img_link_clean:
+                        resume['links']['profile_picture'] = img_link
+                        if isinstance(resume['links']['images'], str):
+                            del resume['links']['images']
+                        else:
+                            resume['links']['images'].remove(img_link)
+                        break
         # convert relative links to abs
         if 'url' in resume:
             url = resume['url']
