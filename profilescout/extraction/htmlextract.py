@@ -267,9 +267,9 @@ def _post_processing(resume, name_candidates):
                     if key == 'profile_picture':
                         print(resume['links'][key])
                     if isinstance(resume['links'][key], str):
-                        resume['links'][key] = to_abs_path('/' + resume['links'][key], url)
+                        resume['links'][key] = to_abs_path(resume['links'][key], url)
                     else:
-                        resume['links'][key] = [to_abs_path('/' + link, url) for link in resume['links'][key]]
+                        resume['links'][key] = [to_abs_path(link, url) for link in resume['links'][key]]
         # remove duplicates
         resume['emails'] = list(dict.fromkeys(resume['emails']))
         resume['other'] = list(dict.fromkeys(resume['other']))
